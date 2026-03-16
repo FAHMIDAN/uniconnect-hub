@@ -1,11 +1,21 @@
-import { Link, useLocation } from "react-router-dom";
-import { GraduationCap, BookOpen, Shield, Home } from "lucide-react";
+import { Link, useLocation, useNavigate } from "react-router-dom";
+import { GraduationCap, BookOpen, Shield, Home, LogIn, LogOut } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { useAuth } from "@/contexts/AuthContext";
 import { motion } from "framer-motion";
+import { toast } from "sonner";
 
 export function AppHeader() {
   const location = useLocation();
+  const navigate = useNavigate();
+  const { user, userRole, signOut } = useAuth();
   const isActive = (path: string) => location.pathname === path;
+
+  const handleSignOut = async () => {
+    await signOut();
+    toast.success("Signed out");
+    navigate("/");
+  };
 
   return (
     <motion.header
@@ -22,30 +32,28 @@ export function AppHeader() {
         </Link>
 
         <nav className="flex items-center gap-1">
-          <Button
-            variant={isActive("/") ? "secondary" : "ghost"}
-            size="sm"
-            asChild
-            className="font-body text-xs gap-1.5"
-          >
+          <Button variant={isActive("/") ? "secondary" : "ghost"} size="sm" asChild className="font-body text-xs gap-1.5">
             <Link to="/"><Home className="h-3.5 w-3.5" />Home</Link>
           </Button>
-          <Button
-            variant={isActive("/dashboard") ? "secondary" : "ghost"}
-            size="sm"
-            asChild
-            className="font-body text-xs gap-1.5"
-          >
-            <Link to="/dashboard"><BookOpen className="h-3.5 w-3.5" />Materials</Link>
-          </Button>
-          <Button
-            variant={isActive("/admin") ? "secondary" : "ghost"}
-            size="sm"
-            asChild
-            className="font-body text-xs gap-1.5"
-          >
-            <Link to="/admin"><Shield className="h-3.5 w-3.5" />Admin</Link>
-          </Button>
+          {user && (
+            <Button variant={isActive("/dashboard") ? "secondary" : "ghost"} size="sm" asChild className="font-body text-xs gap-1.5">
+              <Link to="/dashboard"><BookOpen className="h-3.5 w-3.5" />Materials</Link>
+            </Button>
+          )}
+          {userRole === "admin" && (
+            <Button variant={isActive("/admin") ? "secondary" : "ghost"} size="sm" asChild className="font-body text-xs gap-1.5">
+              <Link to="/admin"><Shield className="h-3.5 w-3.5" />Admin</Link>
+            </Button>
+          )}
+          {user ? (
+            <Button variant="ghost" size="sm" onClick={handleSignOut} className="font-body text-xs gap-1.5">
+              <LogOut className="h-3.5 w-3.5" />Sign Out
+            </Button>
+          ) : (
+            <Button variant={isActive("/login") ? "secondary" : "ghost"} size="sm" asChild className="font-body text-xs gap-1.5">
+              <Link to="/login"><LogIn className="h-3.5 w-3.5" />Login</Link>
+            </Button>
+          )}
         </nav>
       </div>
     </motion.header>
