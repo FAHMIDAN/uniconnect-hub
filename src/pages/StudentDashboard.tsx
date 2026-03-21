@@ -6,6 +6,7 @@ import { StatsGrid } from "@/components/StatsGrid";
 import { Chatbot } from "@/components/Chatbot";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
+import { ProfileEdit } from "@/components/ProfileEdit";
 import { GraduationCap } from "lucide-react";
 import { motion } from "framer-motion";
 
