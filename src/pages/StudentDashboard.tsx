@@ -7,7 +7,7 @@ import { Chatbot } from "@/components/Chatbot";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { ProfileEdit } from "@/components/ProfileEdit";
-import { GraduationCap } from "lucide-react";
+import { GraduationCap, Bell } from "lucide-react";
 import { motion } from "framer-motion";
 
 interface MaterialWithCourse {
@@ -23,6 +23,21 @@ interface MaterialWithCourse {
   fileUrl?: string;
 }
 
+interface Announcement {
+  id: string;
+  title: string;
+  message: string;
+  created_at: string;
+  courses?: { name: string } | null;
+}
+
+interface UserProfile {
+  full_name: string | null;
+  course_id: string | null;
+  current_semester: number | null;
+  courses?: { name: string } | null;
+}
+
 const StudentDashboard = () => {
   const { user } = useAuth();
   const [search, setSearch] = useState("");
@@ -31,34 +46,62 @@ const StudentDashboard = () => {
   const [type, setType] = useState("all");
   const [materials, setMaterials] = useState<MaterialWithCourse[]>([]);
   const [loading, setLoading] = useState(true);
+  const [profile, setProfile] = useState<UserProfile | null>(null);
+  const [announcements, setAnnouncements] = useState<Announcement[]>([]);
 
   useEffect(() => {
-    const fetchMaterials = async () => {
-      const { data, error } = await supabase
-        .from("materials")
-        .select("*, courses(name)")
-        .order("created_at", { ascending: false });
-
-      if (!error && data) {
-        setMaterials(
-          data.map((m: any) => ({
-            id: m.id,
-            title: m.title,
-            type: m.type,
-            course: m.courses?.name || "",
-            semester: m.semester,
-            subject: m.subject,
-            uploadedAt: m.created_at?.split("T")[0] || "",
-            fileSize: m.file_size || "N/A",
-            downloadCount: m.download_count || 0,
-            fileUrl: m.file_url,
-          }))
-        );
-      }
-      setLoading(false);
-    };
+    if (user) {
+      fetchProfile();
+      fetchAnnouncements();
+    }
     fetchMaterials();
-  }, []);
+  }, [user]);
+
+  const fetchProfile = async () => {
+    if (!user) return;
+    const { data } = await supabase
+      .from("profiles")
+      .select("full_name, course_id, current_semester, courses:course_id(name)")
+      .eq("user_id", user.id)
+      .maybeSingle();
+    if (data) setProfile(data as any);
+  };
+
+  const fetchAnnouncements = async () => {
+    const { data } = await supabase
+      .from("announcements")
+      .select("id, title, message, created_at, courses:course_id(name)")
+      .order("created_at", { ascending: false })
+      .limit(5);
+    if (data) setAnnouncements(data as any);
+  };
+
+  const fetchMaterials = async () => {
+    const { data, error } = await supabase
+      .from("materials")
+      .select("*, courses(name)")
+      .order("created_at", { ascending: false });
+
+    if (!error && data) {
+      setMaterials(
+        data.map((m: any) => ({
+          id: m.id,
+          title: m.title,
+          type: m.type,
+          course: m.courses?.name || "",
+          semester: m.semester,
+          subject: m.subject,
+          uploadedAt: m.created_at?.split("T")[0] || "",
+          fileSize: m.file_size || "N/A",
+          downloadCount: m.download_count || 0,
+          fileUrl: m.file_url,
+        }))
+      );
+    }
+    setLoading(false);
+  };
+
+  const displayName = profile?.full_name || user?.user_metadata?.full_name || "";
 
   const filtered = useMemo(() => {
     return materials.filter((m) => {
@@ -80,11 +123,30 @@ const StudentDashboard = () => {
           </div>
           <div className="flex items-center justify-between">
             <p className="text-sm text-muted-foreground font-body">
-              Welcome{user?.user_metadata?.full_name ? `, ${user.user_metadata.full_name}` : ""}! Browse and download study materials.
+              Welcome{displayName ? `, ${displayName}` : ""}! Browse and download study materials.
             </p>
-            <ProfileEdit />
+            <ProfileEdit onProfileUpdated={fetchProfile} />
           </div>
         </motion.div>
+
+        {/* Announcements */}
+        {announcements.length > 0 && (
+          <div className="mb-6 space-y-2">
+            {announcements.map((a) => (
+              <motion.div key={a.id} initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }} className="glass-card rounded-lg p-3 flex items-start gap-3 border-l-4 border-l-primary">
+                <Bell className="h-4 w-4 text-primary shrink-0 mt-0.5" />
+                <div className="flex-1 min-w-0">
+                  <p className="font-heading font-semibold text-sm text-foreground">{a.title}</p>
+                  <p className="text-xs text-muted-foreground font-body mt-0.5">{a.message}</p>
+                  <div className="flex gap-2 mt-1">
+                    {a.courses?.name && <span className="text-[10px] text-primary font-body">{a.courses.name}</span>}
+                    <span className="text-[10px] text-muted-foreground font-body">{a.created_at?.split("T")[0]}</span>
+                  </div>
+                </div>
+              </motion.div>
+            ))}
+          </div>
+        )}
 
         <div className="mb-6"><StatsGrid /></div>
 
@@ -111,7 +173,7 @@ const StudentDashboard = () => {
         </div>
       </div>
 
-      <Chatbot />
+      <Chatbot userProfile={profile} />
     </div>
   );
 };

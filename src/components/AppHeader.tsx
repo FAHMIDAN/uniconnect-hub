@@ -32,26 +32,29 @@ export function AppHeader() {
         </Link>
 
         <nav className="flex items-center gap-1">
-          <Button variant={isActive("/") ? "secondary" : "ghost"} size="sm" asChild className="font-body text-xs gap-1.5">
-            <Link to="/"><Home className="h-3.5 w-3.5" />Home</Link>
-          </Button>
-          {user && (
+          {!user && (
+            <>
+              <Button variant={isActive("/") ? "secondary" : "ghost"} size="sm" asChild className="font-body text-xs gap-1.5">
+                <Link to="/"><LogIn className="h-3.5 w-3.5" />Login</Link>
+              </Button>
+              <Button variant={isActive("/admin-login") ? "secondary" : "ghost"} size="sm" asChild className="font-body text-xs gap-1.5">
+                <Link to="/admin-login"><Shield className="h-3.5 w-3.5" />Admin</Link>
+              </Button>
+            </>
+          )}
+          {user && userRole === "student" && (
             <Button variant={isActive("/dashboard") ? "secondary" : "ghost"} size="sm" asChild className="font-body text-xs gap-1.5">
               <Link to="/dashboard"><BookOpen className="h-3.5 w-3.5" />Materials</Link>
             </Button>
           )}
           {userRole === "admin" && (
             <Button variant={isActive("/admin") ? "secondary" : "ghost"} size="sm" asChild className="font-body text-xs gap-1.5">
-              <Link to="/admin"><Shield className="h-3.5 w-3.5" />Admin</Link>
+              <Link to="/admin"><Shield className="h-3.5 w-3.5" />Admin Panel</Link>
             </Button>
           )}
-          {user ? (
+          {user && (
             <Button variant="ghost" size="sm" onClick={handleSignOut} className="font-body text-xs gap-1.5">
               <LogOut className="h-3.5 w-3.5" />Sign Out
-            </Button>
-          ) : (
-            <Button variant={isActive("/login") ? "secondary" : "ghost"} size="sm" asChild className="font-body text-xs gap-1.5">
-              <Link to="/login"><LogIn className="h-3.5 w-3.5" />Login</Link>
             </Button>
           )}
         </nav>
