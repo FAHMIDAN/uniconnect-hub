@@ -1,147 +1,182 @@
-import { Link } from "react-router-dom";
-import { GraduationCap, BookOpen, FileText, HelpCircle, ArrowRight, Search, Download, Wifi } from "lucide-react";
+import { useState } from "react";
+import { useNavigate } from "react-router-dom";
+import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
-import { courses } from "@/lib/data";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { GraduationCap, LogIn, UserPlus, Shield } from "lucide-react";
+import { toast } from "sonner";
 import { motion } from "framer-motion";
-
-const features = [
-  { icon: Search, title: "Smart Search", desc: "Find materials instantly by course, semester, or subject" },
-  { icon: Download, title: "Download & Save", desc: "Download PDFs for offline access anytime" },
-  { icon: BookOpen, title: "Organized Content", desc: "Course-wise and semester-wise verified materials" },
-  { icon: Wifi, title: "Always Updated", desc: "Latest syllabus and question papers added regularly" },
-];
-
-const materialTypes = [
-  { icon: FileText, label: "Notes", count: "50+", color: "text-primary bg-primary/10" },
-  { icon: BookOpen, label: "Syllabus", count: "30+", color: "text-accent bg-accent/10" },
-  { icon: HelpCircle, label: "Question Papers", count: "80+", color: "text-success bg-success/10" },
-];
+import { useEffect } from "react";
 
 const Index = () => {
+  const { user, userRole, signIn, signUp } = useAuth();
+  const navigate = useNavigate();
+
+  // Redirect if already logged in
+  useEffect(() => {
+    if (user && userRole) {
+      navigate(userRole === "admin" ? "/admin" : "/dashboard", { replace: true });
+    }
+  }, [user, userRole, navigate]);
+
+  const [tab, setTab] = useState("login");
+
+  // Login state
+  const [loginEmail, setLoginEmail] = useState("");
+  const [loginPassword, setLoginPassword] = useState("");
+  const [loginLoading, setLoginLoading] = useState(false);
+
+  // Signup state
+  const [signupName, setSignupName] = useState("");
+  const [signupEmail, setSignupEmail] = useState("");
+  const [signupPassword, setSignupPassword] = useState("");
+  const [signupLoading, setSignupLoading] = useState(false);
+
+  // Admin login state
+  const [adminEmail, setAdminEmail] = useState("");
+  const [adminPassword, setAdminPassword] = useState("");
+  const [adminLoading, setAdminLoading] = useState(false);
+
+  const handleLogin = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoginLoading(true);
+    try {
+      await signIn(loginEmail, loginPassword);
+      toast.success("Welcome back!");
+    } catch (err: any) {
+      toast.error(err.message || "Login failed");
+    } finally {
+      setLoginLoading(false);
+    }
+  };
+
+  const handleSignup = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (signupPassword.length < 6) {
+      toast.error("Password must be at least 6 characters");
+      return;
+    }
+    setSignupLoading(true);
+    try {
+      await signUp(signupEmail, signupPassword, signupName);
+      toast.success("Account created! You can now sign in.");
+      setTab("login");
+    } catch (err: any) {
+      toast.error(err.message || "Signup failed");
+    } finally {
+      setSignupLoading(false);
+    }
+  };
+
+  const handleAdminLogin = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setAdminLoading(true);
+    try {
+      await signIn(adminEmail, adminPassword);
+      toast.success("Welcome, Admin!");
+    } catch (err: any) {
+      toast.error(err.message || "Admin login failed");
+    } finally {
+      setAdminLoading(false);
+    }
+  };
+
   return (
-    <div className="min-h-screen bg-background">
-      {/* Hero */}
-      <section className="gradient-hero text-primary-foreground">
-        <div className="max-w-5xl mx-auto px-4 py-16 md:py-24">
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6 }}
-            className="text-center max-w-2xl mx-auto"
-          >
-            <div className="inline-flex items-center gap-2 bg-primary-foreground/10 backdrop-blur-sm border border-primary-foreground/20 rounded-full px-4 py-1.5 mb-6">
-              <GraduationCap className="h-4 w-4" />
-              <span className="text-xs font-body font-medium">Calicut University Study Hub</span>
-            </div>
-            <h1 className="font-heading font-bold text-3xl md:text-5xl leading-tight mb-4">
-              All your study materials,{" "}
-              <span className="text-accent">one place.</span>
-            </h1>
-            <p className="font-body text-sm md:text-base text-primary-foreground/80 mb-8 max-w-lg mx-auto">
-              Access verified notes, syllabus, and question papers for all Calicut University courses. 
-              No more hunting across websites.
-            </p>
-            <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
-              <Button asChild size="lg" className="gradient-accent text-accent-foreground font-body font-semibold gap-2 px-6">
-                <Link to="/dashboard">
-                  Browse Materials <ArrowRight className="h-4 w-4" />
-                </Link>
-              </Button>
-              <Button asChild variant="outline" size="lg" className="font-body border-primary-foreground/30 text-primary-foreground hover:bg-primary-foreground/10">
-                <Link to="/admin">Admin Panel</Link>
-              </Button>
-            </div>
-          </motion.div>
-        </div>
-      </section>
-
-      {/* Material Types */}
-      <section className="max-w-5xl mx-auto px-4 -mt-8">
-        <div className="grid grid-cols-3 gap-3">
-          {materialTypes.map((t, i) => (
-            <motion.div
-              key={t.label}
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.4, delay: 0.2 + i * 0.1 }}
-              className="glass-card rounded-lg p-4 text-center"
-            >
-              <div className={`inline-flex p-2 rounded-lg mb-2 ${t.color}`}>
-                <t.icon className="h-5 w-5" />
-              </div>
-              <p className="font-heading font-bold text-lg text-foreground">{t.count}</p>
-              <p className="text-xs text-muted-foreground font-body">{t.label}</p>
-            </motion.div>
-          ))}
-        </div>
-      </section>
-
-      {/* Features */}
-      <section className="max-w-5xl mx-auto px-4 py-16">
-        <motion.div
-          initial={{ opacity: 0 }}
-          whileInView={{ opacity: 1 }}
-          viewport={{ once: true }}
-          className="text-center mb-10"
-        >
-          <h2 className="font-heading font-bold text-2xl text-foreground mb-2">Why CU StudyHub?</h2>
-          <p className="font-body text-sm text-muted-foreground">Everything students need, nothing they don't</p>
-        </motion.div>
-        <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
-          {features.map((f, i) => (
-            <motion.div
-              key={f.title}
-              initial={{ opacity: 0, y: 15 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true }}
-              transition={{ delay: i * 0.1 }}
-              className="glass-card rounded-lg p-5"
-            >
-              <div className="bg-primary/10 text-primary p-2 rounded-lg w-fit mb-3">
-                <f.icon className="h-4 w-4" />
-              </div>
-              <h3 className="font-heading font-semibold text-sm text-foreground mb-1">{f.title}</h3>
-              <p className="font-body text-xs text-muted-foreground">{f.desc}</p>
-            </motion.div>
-          ))}
-        </div>
-      </section>
-
-      {/* Courses */}
-      <section className="max-w-5xl mx-auto px-4 pb-16">
-        <h2 className="font-heading font-bold text-xl text-foreground mb-4">Available Courses</h2>
-        <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-3">
-          {courses.map((c, i) => (
-            <motion.div
-              key={c.id}
-              initial={{ opacity: 0 }}
-              whileInView={{ opacity: 1 }}
-              viewport={{ once: true }}
-              transition={{ delay: i * 0.05 }}
-            >
-              <Link
-                to="/dashboard"
-                className="glass-card rounded-lg p-4 flex items-center justify-between group hover:shadow-md transition-all"
-              >
-                <div>
-                  <p className="font-heading font-semibold text-sm text-foreground">{c.name}</p>
-                  <p className="text-xs text-muted-foreground font-body">{c.semesters} Semesters • {c.code}</p>
-                </div>
-                <ArrowRight className="h-4 w-4 text-muted-foreground group-hover:text-primary transition-colors" />
-              </Link>
-            </motion.div>
-          ))}
-        </div>
-      </section>
-
-      {/* Footer */}
-      <footer className="border-t border-border bg-card/50">
-        <div className="max-w-5xl mx-auto px-4 py-6 text-center">
-          <p className="font-body text-xs text-muted-foreground">
-            © 2026 CU StudyHub — Built for Calicut University Students
+    <div className="min-h-screen flex items-center justify-center bg-background px-4">
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="w-full max-w-md"
+      >
+        <div className="text-center mb-8">
+          <div className="inline-flex gradient-primary p-3 rounded-xl mb-4">
+            <GraduationCap className="h-7 w-7 text-primary-foreground" />
+          </div>
+          <h1 className="font-heading font-bold text-2xl text-foreground">CU StudyHub</h1>
+          <p className="text-sm text-muted-foreground font-body mt-1">
+            Calicut University Study Materials Portal
           </p>
         </div>
-      </footer>
+
+        <div className="glass-card rounded-xl p-6">
+          <Tabs value={tab} onValueChange={setTab}>
+            <TabsList className="w-full mb-6">
+              <TabsTrigger value="login" className="flex-1 font-body gap-1.5 text-xs">
+                <LogIn className="h-3.5 w-3.5" /> Student Login
+              </TabsTrigger>
+              <TabsTrigger value="signup" className="flex-1 font-body gap-1.5 text-xs">
+                <UserPlus className="h-3.5 w-3.5" /> Sign Up
+              </TabsTrigger>
+              <TabsTrigger value="admin" className="flex-1 font-body gap-1.5 text-xs">
+                <Shield className="h-3.5 w-3.5" /> Admin
+              </TabsTrigger>
+            </TabsList>
+
+            <TabsContent value="login">
+              <form onSubmit={handleLogin} className="space-y-4">
+                <div>
+                  <Label className="font-body text-sm">Email</Label>
+                  <Input type="email" value={loginEmail} onChange={(e) => setLoginEmail(e.target.value)} placeholder="you@example.com" required className="mt-1 font-body" />
+                </div>
+                <div>
+                  <Label className="font-body text-sm">Password</Label>
+                  <Input type="password" value={loginPassword} onChange={(e) => setLoginPassword(e.target.value)} placeholder="••••••••" required className="mt-1 font-body" />
+                </div>
+                <Button type="submit" disabled={loginLoading} className="w-full gradient-primary text-primary-foreground font-body gap-2">
+                  <LogIn className="h-4 w-4" />
+                  {loginLoading ? "Signing in..." : "Sign In"}
+                </Button>
+              </form>
+            </TabsContent>
+
+            <TabsContent value="signup">
+              <form onSubmit={handleSignup} className="space-y-4">
+                <div>
+                  <Label className="font-body text-sm">Full Name</Label>
+                  <Input value={signupName} onChange={(e) => setSignupName(e.target.value)} placeholder="John Doe" required className="mt-1 font-body" />
+                </div>
+                <div>
+                  <Label className="font-body text-sm">Email</Label>
+                  <Input type="email" value={signupEmail} onChange={(e) => setSignupEmail(e.target.value)} placeholder="you@example.com" required className="mt-1 font-body" />
+                </div>
+                <div>
+                  <Label className="font-body text-sm">Password</Label>
+                  <Input type="password" value={signupPassword} onChange={(e) => setSignupPassword(e.target.value)} placeholder="Min 6 characters" required className="mt-1 font-body" />
+                </div>
+                <Button type="submit" disabled={signupLoading} className="w-full gradient-primary text-primary-foreground font-body gap-2">
+                  <UserPlus className="h-4 w-4" />
+                  {signupLoading ? "Creating account..." : "Sign Up"}
+                </Button>
+              </form>
+            </TabsContent>
+
+            <TabsContent value="admin">
+              <form onSubmit={handleAdminLogin} className="space-y-4">
+                <div className="bg-muted/50 rounded-lg p-3 mb-2">
+                  <p className="text-xs text-muted-foreground font-body">
+                    <Shield className="h-3 w-3 inline mr-1" />
+                    Admin access only. Use your admin credentials.
+                  </p>
+                </div>
+                <div>
+                  <Label className="font-body text-sm">Admin Email</Label>
+                  <Input type="email" value={adminEmail} onChange={(e) => setAdminEmail(e.target.value)} placeholder="admin@studyhub.com" required className="mt-1 font-body" />
+                </div>
+                <div>
+                  <Label className="font-body text-sm">Password</Label>
+                  <Input type="password" value={adminPassword} onChange={(e) => setAdminPassword(e.target.value)} placeholder="••••••••" required className="mt-1 font-body" />
+                </div>
+                <Button type="submit" disabled={adminLoading} className="w-full gradient-primary text-primary-foreground font-body gap-2">
+                  <Shield className="h-4 w-4" />
+                  {adminLoading ? "Signing in..." : "Admin Sign In"}
+                </Button>
+              </form>
+            </TabsContent>
+          </Tabs>
+        </div>
+      </motion.div>
     </div>
   );
 };
