@@ -3,13 +3,14 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Label } from "@/components/ui/label";
-import { Plus, Trash2, Shield, Upload, FileText, BookOpen, HelpCircle, Users, UserX } from "lucide-react";
+import { Plus, Trash2, Shield, Upload, FileText, BookOpen, HelpCircle, Users, UserX, Bell, Send } from "lucide-react";
 import { motion } from "framer-motion";
 import { toast } from "sonner";
 
@@ -19,41 +20,22 @@ const typeIcons: Record<string, any> = {
   "question-paper": HelpCircle,
 };
 
-interface CourseRow {
-  id: string;
-  name: string;
-  code: string;
-  semesters: number;
-}
-
-interface MaterialRow {
-  id: string;
-  title: string;
-  type: string;
-  course_id: string;
-  semester: number;
-  subject: string;
-  file_url: string | null;
-  file_size: string | null;
-  download_count: number | null;
-  created_at: string;
-  courses?: { name: string } | null;
-}
-
-interface UserRow {
-  user_id: string;
-  full_name: string | null;
-  email: string | null;
-  created_at: string;
-}
+interface CourseRow { id: string; name: string; code: string; semesters: number; }
+interface MaterialRow { id: string; title: string; type: string; course_id: string; semester: number; subject: string; file_url: string | null; file_size: string | null; download_count: number | null; created_at: string; courses?: { name: string } | null; }
+interface UserRow { user_id: string; full_name: string | null; email: string | null; created_at: string; current_semester: number | null; courses?: { name: string } | null; }
+interface AnnouncementRow { id: string; title: string; message: string; course_id: string | null; created_at: string; courses?: { name: string } | null; }
 
 const AdminDashboard = () => {
-  const { userRole } = useAuth();
+  const { user, userRole } = useAuth();
   const [tab, setTab] = useState("materials");
   const [courses, setCourses] = useState<CourseRow[]>([]);
   const [allMaterials, setAllMaterials] = useState<MaterialRow[]>([]);
   const [users, setUsers] = useState<UserRow[]>([]);
+  const [announcements, setAnnouncements] = useState<AnnouncementRow[]>([]);
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [announcementDialogOpen, setAnnouncementDialogOpen] = useState(false);
+
+  // Material form
   const [newTitle, setNewTitle] = useState("");
   const [newType, setNewType] = useState("notes");
   const [newCourse, setNewCourse] = useState("");
@@ -62,10 +44,17 @@ const AdminDashboard = () => {
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [uploading, setUploading] = useState(false);
 
+  // Announcement form
+  const [annTitle, setAnnTitle] = useState("");
+  const [annMessage, setAnnMessage] = useState("");
+  const [annCourse, setAnnCourse] = useState("all");
+  const [annSending, setAnnSending] = useState(false);
+
   useEffect(() => {
     fetchCourses();
     fetchMaterials();
     fetchUsers();
+    fetchAnnouncements();
   }, []);
 
   const fetchCourses = async () => {
@@ -79,8 +68,13 @@ const AdminDashboard = () => {
   };
 
   const fetchUsers = async () => {
-    const { data } = await supabase.from("profiles").select("user_id, full_name, email, created_at").order("created_at", { ascending: false });
-    if (data) setUsers(data);
+    const { data } = await supabase.from("profiles").select("user_id, full_name, email, created_at, current_semester, courses:course_id(name)").order("created_at", { ascending: false });
+    if (data) setUsers(data as any);
+  };
+
+  const fetchAnnouncements = async () => {
+    const { data } = await supabase.from("announcements").select("*, courses:course_id(name)").order("created_at", { ascending: false });
+    if (data) setAnnouncements(data as any);
   };
 
   const handleAdd = async () => {
@@ -95,29 +89,19 @@ const AdminDashboard = () => {
 
     if (selectedFile) {
       const filePath = `${Date.now()}_${selectedFile.name}`;
-      const { error: uploadError } = await supabase.storage
-        .from("materials")
-        .upload(filePath, selectedFile);
-
+      const { error: uploadError } = await supabase.storage.from("materials").upload(filePath, selectedFile);
       if (uploadError) {
         toast.error("File upload failed: " + uploadError.message);
         setUploading(false);
         return;
       }
-
       const { data: urlData } = supabase.storage.from("materials").getPublicUrl(filePath);
       fileUrl = urlData.publicUrl;
       fileSize = `${(selectedFile.size / (1024 * 1024)).toFixed(1)} MB`;
     }
 
     const { error } = await supabase.from("materials").insert({
-      title: newTitle,
-      type: newType,
-      course_id: newCourse,
-      semester: Number(newSemester),
-      subject: newSubject,
-      file_url: fileUrl,
-      file_size: fileSize,
+      title: newTitle, type: newType, course_id: newCourse, semester: Number(newSemester), subject: newSubject, file_url: fileUrl, file_size: fileSize,
     });
 
     if (error) {
@@ -125,9 +109,7 @@ const AdminDashboard = () => {
     } else {
       toast.success("Material added successfully");
       setDialogOpen(false);
-      setNewTitle("");
-      setNewSubject("");
-      setSelectedFile(null);
+      setNewTitle(""); setNewSubject(""); setSelectedFile(null);
       fetchMaterials();
     }
     setUploading(false);
@@ -135,16 +117,37 @@ const AdminDashboard = () => {
 
   const handleDelete = async (id: string) => {
     const { error } = await supabase.from("materials").delete().eq("id", id);
-    if (error) {
-      toast.error("Delete failed");
-    } else {
-      toast.success("Material deleted");
-      fetchMaterials();
-    }
+    if (error) toast.error("Delete failed");
+    else { toast.success("Material deleted"); fetchMaterials(); }
   };
 
-  const handleDeleteUser = async (userId: string) => {
-    toast.info("User deletion requires server-side admin access");
+  const handleSendAnnouncement = async () => {
+    if (!annTitle.trim() || !annMessage.trim()) {
+      toast.error("Please fill in title and message");
+      return;
+    }
+    setAnnSending(true);
+    const { error } = await supabase.from("announcements").insert({
+      title: annTitle,
+      message: annMessage,
+      course_id: annCourse === "all" ? null : annCourse,
+      created_by: user!.id,
+    });
+    if (error) {
+      toast.error("Failed to send announcement: " + error.message);
+    } else {
+      toast.success("Announcement sent!");
+      setAnnouncementDialogOpen(false);
+      setAnnTitle(""); setAnnMessage(""); setAnnCourse("all");
+      fetchAnnouncements();
+    }
+    setAnnSending(false);
+  };
+
+  const handleDeleteAnnouncement = async (id: string) => {
+    const { error } = await supabase.from("announcements").delete().eq("id", id);
+    if (error) toast.error("Delete failed");
+    else { toast.success("Announcement deleted"); fetchAnnouncements(); }
   };
 
   if (userRole !== "admin") {
@@ -153,7 +156,7 @@ const AdminDashboard = () => {
         <div className="text-center">
           <Shield className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
           <h1 className="font-heading font-bold text-xl text-foreground mb-2">Access Denied</h1>
-          <p className="text-sm text-muted-foreground font-body">You need admin privileges to access this page.</p>
+          <p className="text-sm text-muted-foreground font-body">You need admin privileges.</p>
         </div>
       </div>
     );
@@ -168,105 +171,141 @@ const AdminDashboard = () => {
               <Shield className="h-5 w-5 text-primary" />
               <h1 className="font-heading font-bold text-xl text-foreground">Admin Panel</h1>
             </div>
-            <p className="text-sm text-muted-foreground font-body">Manage materials, users, and content</p>
+            <p className="text-sm text-muted-foreground font-body">Manage materials, users, and announcements</p>
           </div>
-          <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-            <DialogTrigger asChild>
-              <Button className="gradient-primary text-primary-foreground font-body gap-1.5">
-                <Plus className="h-4 w-4" /> Add Material
-              </Button>
-            </DialogTrigger>
-            <DialogContent className="sm:max-w-md">
-              <DialogHeader>
-                <DialogTitle className="font-heading">Upload New Material</DialogTitle>
-              </DialogHeader>
-              <div className="space-y-4 pt-2">
-                <div>
-                  <Label className="font-body text-sm">Title</Label>
-                  <Input value={newTitle} onChange={(e) => setNewTitle(e.target.value)} placeholder="e.g. Data Structures Notes" className="mt-1 font-body" />
-                </div>
-                <div>
-                  <Label className="font-body text-sm">Type</Label>
-                  <Select value={newType} onValueChange={setNewType}>
-                    <SelectTrigger className="mt-1 font-body"><SelectValue /></SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="notes">Notes</SelectItem>
-                      <SelectItem value="syllabus">Syllabus</SelectItem>
-                      <SelectItem value="question-paper">Question Paper</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div>
-                  <Label className="font-body text-sm">Course</Label>
-                  <Select value={newCourse} onValueChange={setNewCourse}>
-                    <SelectTrigger className="mt-1 font-body"><SelectValue placeholder="Select course" /></SelectTrigger>
-                    <SelectContent>
-                      {courses.map((c) => (
-                        <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="grid grid-cols-2 gap-3">
+          <div className="flex gap-2">
+            <Dialog open={announcementDialogOpen} onOpenChange={setAnnouncementDialogOpen}>
+              <DialogTrigger asChild>
+                <Button variant="outline" className="font-body gap-1.5">
+                  <Bell className="h-4 w-4" /> Send Announcement
+                </Button>
+              </DialogTrigger>
+              <DialogContent className="sm:max-w-md">
+                <DialogHeader>
+                  <DialogTitle className="font-heading">Send Announcement</DialogTitle>
+                </DialogHeader>
+                <div className="space-y-4 pt-2">
                   <div>
-                    <Label className="font-body text-sm">Semester</Label>
-                    <Select value={newSemester} onValueChange={setNewSemester}>
+                    <Label className="font-body text-sm">Title</Label>
+                    <Input value={annTitle} onChange={(e) => setAnnTitle(e.target.value)} placeholder="Announcement title" className="mt-1 font-body" />
+                  </div>
+                  <div>
+                    <Label className="font-body text-sm">Message</Label>
+                    <Textarea value={annMessage} onChange={(e) => setAnnMessage(e.target.value)} placeholder="Write your message..." className="mt-1 font-body" rows={4} />
+                  </div>
+                  <div>
+                    <Label className="font-body text-sm">Target Course (optional)</Label>
+                    <Select value={annCourse} onValueChange={setAnnCourse}>
                       <SelectTrigger className="mt-1 font-body"><SelectValue /></SelectTrigger>
                       <SelectContent>
-                        {Array.from({ length: 8 }, (_, i) => (
-                          <SelectItem key={i + 1} value={String(i + 1)}>Semester {i + 1}</SelectItem>
+                        <SelectItem value="all">All Courses</SelectItem>
+                        {courses.map((c) => (
+                          <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
                         ))}
                       </SelectContent>
                     </Select>
                   </div>
-                  <div>
-                    <Label className="font-body text-sm">Subject</Label>
-                    <Input value={newSubject} onChange={(e) => setNewSubject(e.target.value)} placeholder="Subject name" className="mt-1 font-body" />
-                  </div>
+                  <Button onClick={handleSendAnnouncement} disabled={annSending} className="w-full gradient-primary text-primary-foreground font-body gap-1.5">
+                    <Send className="h-4 w-4" />
+                    {annSending ? "Sending..." : "Send Announcement"}
+                  </Button>
                 </div>
-                <div>
-                  <Label className="font-body text-sm">PDF File</Label>
-                  <Input
-                    type="file"
-                    accept=".pdf"
-                    onChange={(e) => setSelectedFile(e.target.files?.[0] || null)}
-                    className="mt-1 font-body"
-                  />
-                </div>
-                <Button onClick={handleAdd} disabled={uploading} className="w-full gradient-primary text-primary-foreground font-body gap-1.5">
-                  <Upload className="h-4 w-4" />
-                  {uploading ? "Uploading..." : "Upload Material"}
+              </DialogContent>
+            </Dialog>
+
+            <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+              <DialogTrigger asChild>
+                <Button className="gradient-primary text-primary-foreground font-body gap-1.5">
+                  <Plus className="h-4 w-4" /> Add Material
                 </Button>
-              </div>
-            </DialogContent>
-          </Dialog>
+              </DialogTrigger>
+              <DialogContent className="sm:max-w-md">
+                <DialogHeader>
+                  <DialogTitle className="font-heading">Upload New Material</DialogTitle>
+                </DialogHeader>
+                <div className="space-y-4 pt-2">
+                  <div>
+                    <Label className="font-body text-sm">Title</Label>
+                    <Input value={newTitle} onChange={(e) => setNewTitle(e.target.value)} placeholder="e.g. Data Structures Notes" className="mt-1 font-body" />
+                  </div>
+                  <div>
+                    <Label className="font-body text-sm">Type</Label>
+                    <Select value={newType} onValueChange={setNewType}>
+                      <SelectTrigger className="mt-1 font-body"><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="notes">Notes</SelectItem>
+                        <SelectItem value="syllabus">Syllabus</SelectItem>
+                        <SelectItem value="question-paper">Question Paper</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div>
+                    <Label className="font-body text-sm">Course</Label>
+                    <Select value={newCourse} onValueChange={setNewCourse}>
+                      <SelectTrigger className="mt-1 font-body"><SelectValue placeholder="Select course" /></SelectTrigger>
+                      <SelectContent>
+                        {courses.map((c) => (
+                          <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <Label className="font-body text-sm">Semester</Label>
+                      <Select value={newSemester} onValueChange={setNewSemester}>
+                        <SelectTrigger className="mt-1 font-body"><SelectValue /></SelectTrigger>
+                        <SelectContent>
+                          {Array.from({ length: 8 }, (_, i) => (
+                            <SelectItem key={i + 1} value={String(i + 1)}>Semester {i + 1}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div>
+                      <Label className="font-body text-sm">Subject</Label>
+                      <Input value={newSubject} onChange={(e) => setNewSubject(e.target.value)} placeholder="Subject name" className="mt-1 font-body" />
+                    </div>
+                  </div>
+                  <div>
+                    <Label className="font-body text-sm">PDF File</Label>
+                    <Input type="file" accept=".pdf" onChange={(e) => setSelectedFile(e.target.files?.[0] || null)} className="mt-1 font-body" />
+                  </div>
+                  <Button onClick={handleAdd} disabled={uploading} className="w-full gradient-primary text-primary-foreground font-body gap-1.5">
+                    <Upload className="h-4 w-4" />
+                    {uploading ? "Uploading..." : "Upload Material"}
+                  </Button>
+                </div>
+              </DialogContent>
+            </Dialog>
+          </div>
         </motion.div>
 
-        {/* Stats summary */}
-        <div className="grid grid-cols-3 gap-3 mb-6">
+        {/* Stats */}
+        <div className="grid grid-cols-4 gap-3 mb-6">
           <div className="glass-card rounded-lg p-4">
             <p className="font-heading font-bold text-xl text-foreground">{allMaterials.length}</p>
             <p className="text-xs text-muted-foreground font-body">Materials</p>
           </div>
           <div className="glass-card rounded-lg p-4">
             <p className="font-heading font-bold text-xl text-foreground">{users.length}</p>
-            <p className="text-xs text-muted-foreground font-body">Registered Users</p>
+            <p className="text-xs text-muted-foreground font-body">Users</p>
           </div>
           <div className="glass-card rounded-lg p-4">
             <p className="font-heading font-bold text-xl text-foreground">{courses.length}</p>
             <p className="text-xs text-muted-foreground font-body">Courses</p>
           </div>
+          <div className="glass-card rounded-lg p-4">
+            <p className="font-heading font-bold text-xl text-foreground">{announcements.length}</p>
+            <p className="text-xs text-muted-foreground font-body">Announcements</p>
+          </div>
         </div>
 
-        {/* Tabs */}
         <Tabs value={tab} onValueChange={setTab}>
           <TabsList className="mb-4">
-            <TabsTrigger value="materials" className="font-body gap-1.5">
-              <FileText className="h-3.5 w-3.5" /> Materials
-            </TabsTrigger>
-            <TabsTrigger value="users" className="font-body gap-1.5">
-              <Users className="h-3.5 w-3.5" /> Users
-            </TabsTrigger>
+            <TabsTrigger value="materials" className="font-body gap-1.5"><FileText className="h-3.5 w-3.5" /> Materials</TabsTrigger>
+            <TabsTrigger value="users" className="font-body gap-1.5"><Users className="h-3.5 w-3.5" /> Users</TabsTrigger>
+            <TabsTrigger value="announcements" className="font-body gap-1.5"><Bell className="h-3.5 w-3.5" /> Announcements</TabsTrigger>
           </TabsList>
 
           <TabsContent value="materials">
@@ -293,9 +332,7 @@ const AdminDashboard = () => {
                             <span className="truncate max-w-[200px]">{m.title}</span>
                           </div>
                         </TableCell>
-                        <TableCell>
-                          <Badge variant="secondary" className="text-[10px] font-body capitalize">{m.type.replace("-", " ")}</Badge>
-                        </TableCell>
+                        <TableCell><Badge variant="secondary" className="text-[10px] font-body capitalize">{m.type.replace("-", " ")}</Badge></TableCell>
                         <TableCell className="font-body text-xs text-muted-foreground hidden md:table-cell">{m.courses?.name}</TableCell>
                         <TableCell className="font-body text-xs hidden sm:table-cell">{m.semester}</TableCell>
                         <TableCell className="font-body text-xs hidden lg:table-cell">{m.download_count}</TableCell>
@@ -308,9 +345,7 @@ const AdminDashboard = () => {
                     );
                   })}
                   {allMaterials.length === 0 && (
-                    <TableRow>
-                      <TableCell colSpan={6} className="text-center py-8 text-muted-foreground font-body">No materials yet. Add your first one!</TableCell>
-                    </TableRow>
+                    <TableRow><TableCell colSpan={6} className="text-center py-8 text-muted-foreground font-body">No materials yet.</TableCell></TableRow>
                   )}
                 </TableBody>
               </Table>
@@ -324,8 +359,9 @@ const AdminDashboard = () => {
                   <TableRow>
                     <TableHead className="font-heading text-xs">Name</TableHead>
                     <TableHead className="font-heading text-xs">Email</TableHead>
+                    <TableHead className="font-heading text-xs hidden md:table-cell">Course</TableHead>
+                    <TableHead className="font-heading text-xs hidden sm:table-cell">Semester</TableHead>
                     <TableHead className="font-heading text-xs hidden sm:table-cell">Joined</TableHead>
-                    <TableHead className="font-heading text-xs w-20">Actions</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -333,18 +369,47 @@ const AdminDashboard = () => {
                     <TableRow key={u.user_id}>
                       <TableCell className="font-body text-sm font-medium">{u.full_name || "—"}</TableCell>
                       <TableCell className="font-body text-xs text-muted-foreground">{u.email}</TableCell>
+                      <TableCell className="font-body text-xs text-muted-foreground hidden md:table-cell">{u.courses?.name || "—"}</TableCell>
+                      <TableCell className="font-body text-xs hidden sm:table-cell">{u.current_semester || "—"}</TableCell>
                       <TableCell className="font-body text-xs hidden sm:table-cell">{u.created_at?.split("T")[0]}</TableCell>
+                    </TableRow>
+                  ))}
+                  {users.length === 0 && (
+                    <TableRow><TableCell colSpan={5} className="text-center py-8 text-muted-foreground font-body">No registered users yet.</TableCell></TableRow>
+                  )}
+                </TableBody>
+              </Table>
+            </motion.div>
+          </TabsContent>
+
+          <TabsContent value="announcements">
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="glass-card rounded-lg overflow-hidden">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead className="font-heading text-xs">Title</TableHead>
+                    <TableHead className="font-heading text-xs">Message</TableHead>
+                    <TableHead className="font-heading text-xs hidden md:table-cell">Course</TableHead>
+                    <TableHead className="font-heading text-xs hidden sm:table-cell">Date</TableHead>
+                    <TableHead className="font-heading text-xs w-20">Actions</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {announcements.map((a) => (
+                    <TableRow key={a.id}>
+                      <TableCell className="font-body text-sm font-medium">{a.title}</TableCell>
+                      <TableCell className="font-body text-xs text-muted-foreground max-w-[200px] truncate">{a.message}</TableCell>
+                      <TableCell className="font-body text-xs hidden md:table-cell">{a.courses?.name || "All"}</TableCell>
+                      <TableCell className="font-body text-xs hidden sm:table-cell">{a.created_at?.split("T")[0]}</TableCell>
                       <TableCell>
-                        <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => handleDeleteUser(u.user_id)}>
-                          <UserX className="h-3.5 w-3.5 text-destructive" />
+                        <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => handleDeleteAnnouncement(a.id)}>
+                          <Trash2 className="h-3.5 w-3.5 text-destructive" />
                         </Button>
                       </TableCell>
                     </TableRow>
                   ))}
-                  {users.length === 0 && (
-                    <TableRow>
-                      <TableCell colSpan={4} className="text-center py-8 text-muted-foreground font-body">No registered users yet.</TableCell>
-                    </TableRow>
+                  {announcements.length === 0 && (
+                    <TableRow><TableCell colSpan={5} className="text-center py-8 text-muted-foreground font-body">No announcements yet.</TableCell></TableRow>
                   )}
                 </TableBody>
               </Table>

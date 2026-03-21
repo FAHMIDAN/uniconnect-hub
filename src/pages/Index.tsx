@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useState, useEffect } from "react";
+import { useNavigate, Link } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -8,13 +8,11 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { GraduationCap, LogIn, UserPlus, Shield } from "lucide-react";
 import { toast } from "sonner";
 import { motion } from "framer-motion";
-import { useEffect } from "react";
 
 const Index = () => {
   const { user, userRole, signIn, signUp } = useAuth();
   const navigate = useNavigate();
 
-  // Redirect if already logged in
   useEffect(() => {
     if (user && userRole) {
       navigate(userRole === "admin" ? "/admin" : "/dashboard", { replace: true });
@@ -22,22 +20,13 @@ const Index = () => {
   }, [user, userRole, navigate]);
 
   const [tab, setTab] = useState("login");
-
-  // Login state
   const [loginEmail, setLoginEmail] = useState("");
   const [loginPassword, setLoginPassword] = useState("");
   const [loginLoading, setLoginLoading] = useState(false);
-
-  // Signup state
   const [signupName, setSignupName] = useState("");
   const [signupEmail, setSignupEmail] = useState("");
   const [signupPassword, setSignupPassword] = useState("");
   const [signupLoading, setSignupLoading] = useState(false);
-
-  // Admin login state
-  const [adminEmail, setAdminEmail] = useState("");
-  const [adminPassword, setAdminPassword] = useState("");
-  const [adminLoading, setAdminLoading] = useState(false);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -70,19 +59,6 @@ const Index = () => {
     }
   };
 
-  const handleAdminLogin = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setAdminLoading(true);
-    try {
-      await signIn(adminEmail, adminPassword);
-      toast.success("Welcome, Admin!");
-    } catch (err: any) {
-      toast.error(err.message || "Admin login failed");
-    } finally {
-      setAdminLoading(false);
-    }
-  };
-
   return (
     <div className="min-h-screen flex items-center justify-center bg-background px-4">
       <motion.div
@@ -104,13 +80,10 @@ const Index = () => {
           <Tabs value={tab} onValueChange={setTab}>
             <TabsList className="w-full mb-6">
               <TabsTrigger value="login" className="flex-1 font-body gap-1.5 text-xs">
-                <LogIn className="h-3.5 w-3.5" /> Student Login
+                <LogIn className="h-3.5 w-3.5" /> Login
               </TabsTrigger>
               <TabsTrigger value="signup" className="flex-1 font-body gap-1.5 text-xs">
                 <UserPlus className="h-3.5 w-3.5" /> Sign Up
-              </TabsTrigger>
-              <TabsTrigger value="admin" className="flex-1 font-body gap-1.5 text-xs">
-                <Shield className="h-3.5 w-3.5" /> Admin
               </TabsTrigger>
             </TabsList>
 
@@ -151,30 +124,13 @@ const Index = () => {
                 </Button>
               </form>
             </TabsContent>
-
-            <TabsContent value="admin">
-              <form onSubmit={handleAdminLogin} className="space-y-4">
-                <div className="bg-muted/50 rounded-lg p-3 mb-2">
-                  <p className="text-xs text-muted-foreground font-body">
-                    <Shield className="h-3 w-3 inline mr-1" />
-                    Admin access only. Use your admin credentials.
-                  </p>
-                </div>
-                <div>
-                  <Label className="font-body text-sm">Admin Email</Label>
-                  <Input type="email" value={adminEmail} onChange={(e) => setAdminEmail(e.target.value)} placeholder="admin@studyhub.com" required className="mt-1 font-body" />
-                </div>
-                <div>
-                  <Label className="font-body text-sm">Password</Label>
-                  <Input type="password" value={adminPassword} onChange={(e) => setAdminPassword(e.target.value)} placeholder="••••••••" required className="mt-1 font-body" />
-                </div>
-                <Button type="submit" disabled={adminLoading} className="w-full gradient-primary text-primary-foreground font-body gap-2">
-                  <Shield className="h-4 w-4" />
-                  {adminLoading ? "Signing in..." : "Admin Sign In"}
-                </Button>
-              </form>
-            </TabsContent>
           </Tabs>
+
+          <div className="mt-4 pt-4 border-t border-border text-center">
+            <Link to="/admin-login" className="text-xs text-muted-foreground hover:text-foreground font-body inline-flex items-center gap-1 transition-colors">
+              <Shield className="h-3 w-3" /> Admin Login
+            </Link>
+          </div>
         </div>
       </motion.div>
     </div>

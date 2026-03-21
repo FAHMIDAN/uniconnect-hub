@@ -16,7 +16,11 @@ interface Course {
   semesters: number;
 }
 
-export function ProfileEdit() {
+interface ProfileEditProps {
+  onProfileUpdated?: () => void;
+}
+
+export function ProfileEdit({ onProfileUpdated }: ProfileEditProps) {
   const { user } = useAuth();
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -80,6 +84,7 @@ export function ProfileEdit() {
     } else {
       toast.success("Profile updated!");
       setOpen(false);
+      onProfileUpdated?.();
     }
     setLoading(false);
   };
