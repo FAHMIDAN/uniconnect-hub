@@ -6,6 +6,7 @@ import { StatsGrid } from "@/components/StatsGrid";
 import { Chatbot } from "@/components/Chatbot";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
+import { ProfileEdit } from "@/components/ProfileEdit";
 import { GraduationCap } from "lucide-react";
 import { motion } from "framer-motion";
 
@@ -77,9 +78,12 @@ const StudentDashboard = () => {
             <GraduationCap className="h-5 w-5 text-primary" />
             <h1 className="font-heading font-bold text-xl text-foreground">Study Hub</h1>
           </div>
-          <p className="text-sm text-muted-foreground font-body">
-            Welcome{user?.user_metadata?.full_name ? `, ${user.user_metadata.full_name}` : ""}! Browse and download study materials.
-          </p>
+          <div className="flex items-center justify-between">
+            <p className="text-sm text-muted-foreground font-body">
+              Welcome{user?.user_metadata?.full_name ? `, ${user.user_metadata.full_name}` : ""}! Browse and download study materials.
+            </p>
+            <ProfileEdit />
+          </div>
         </motion.div>
 
         <div className="mb-6"><StatsGrid /></div>
