@@ -27,7 +27,8 @@ const AdminLogin = () => {
     e.preventDefault();
     setLoading(true);
     try {
-      await signIn(email, password);
+      const normalizedEmail = email.trim().toLowerCase() === "admin" ? "admin@studyhub.com" : email.trim();
+      await signIn(normalizedEmail, password);
       toast.success("Welcome, Admin!");
     } catch (err: any) {
       toast.error(err.message || "Admin login failed");
@@ -63,7 +64,7 @@ const AdminLogin = () => {
           <form onSubmit={handleLogin} className="space-y-4">
             <div>
               <Label className="font-body text-sm">Admin Email</Label>
-              <Input type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="admin@studyhub.com" required className="mt-1 font-body" />
+                  <Input value={email} onChange={(e) => setEmail(e.target.value)} placeholder="admin or admin@studyhub.com" required className="mt-1 font-body" />
             </div>
             <div>
               <Label className="font-body text-sm">Password</Label>

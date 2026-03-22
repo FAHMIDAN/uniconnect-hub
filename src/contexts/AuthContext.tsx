@@ -21,12 +21,23 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [userRole, setUserRole] = useState<"admin" | "student" | null>(null);
 
   const fetchRole = async (userId: string) => {
-    const { data } = await supabase
+    const { data, error } = await supabase
       .from("user_roles")
       .select("role")
-      .eq("user_id", userId)
-      .maybeSingle();
-    setUserRole(data?.role ?? "student");
+      .eq("user_id", userId);
+
+    if (error) {
+      setUserRole("student");
+      return;
+    }
+
+    const roles = data?.map(({ role }) => role) ?? [];
+    if (roles.includes("admin")) {
+      setUserRole("admin");
+      return;
+    }
+
+    setUserRole("student");
   };
 
   useEffect(() => {

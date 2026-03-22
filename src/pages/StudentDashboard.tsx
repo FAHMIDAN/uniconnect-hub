@@ -46,7 +46,7 @@ interface CourseRow {
 }
 
 const StudentDashboard = () => {
-  const { user } = useAuth();
+  const { user, userRole } = useAuth();
   const [search, setSearch] = useState("");
   const [type, setType] = useState("all");
   const [materials, setMaterials] = useState<MaterialWithCourse[]>([]);
@@ -227,7 +227,7 @@ const StudentDashboard = () => {
         </div>
       </div>
 
-      <Chatbot userProfile={profile} />
+      {userRole === "student" && <Chatbot userProfile={profile} />}
     </div>
   );
 };

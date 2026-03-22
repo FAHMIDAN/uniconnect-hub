@@ -20,7 +20,7 @@ export function ProtectedRoute({ children, requiredRole }: ProtectedRouteProps) 
   if (!user) return <Navigate to="/login" replace />;
 
   if (requiredRole && userRole !== requiredRole) {
-    return <Navigate to="/dashboard" replace />;
+    return <Navigate to={userRole === "admin" ? "/admin" : "/dashboard"} replace />;
   }
 
   return <>{children}</>;

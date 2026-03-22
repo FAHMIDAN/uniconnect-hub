@@ -16,16 +16,27 @@ Deno.serve(async (req) => {
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
     );
 
+    const ensureAdminRole = async (userId: string) => {
+      const { error: deleteError } = await supabaseAdmin
+        .from("user_roles")
+        .delete()
+        .eq("user_id", userId);
+
+      if (deleteError) throw deleteError;
+
+      const { error: insertError } = await supabaseAdmin
+        .from("user_roles")
+        .insert({ user_id: userId, role: "admin" });
+
+      if (insertError) throw insertError;
+    };
+
     // Check if admin already exists
     const { data: existingUsers } = await supabaseAdmin.auth.admin.listUsers();
     const adminExists = existingUsers?.users?.find(u => u.email === "admin@studyhub.com");
     
     if (adminExists) {
-      // Ensure admin role exists
-      await supabaseAdmin.from("user_roles").upsert(
-        { user_id: adminExists.id, role: "admin" },
-        { onConflict: "user_id" }
-      );
+      await ensureAdminRole(adminExists.id);
       return new Response(JSON.stringify({ message: "Admin already exists" }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
@@ -41,11 +52,7 @@ Deno.serve(async (req) => {
 
     if (error) throw error;
 
-    // Set admin role
-    await supabaseAdmin.from("user_roles").upsert(
-      { user_id: newUser.user.id, role: "admin" },
-      { onConflict: "user_id" }
-    );
+    await ensureAdminRole(newUser.user.id);
 
     return new Response(JSON.stringify({ message: "Admin created", email: "admin@studyhub.com" }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
