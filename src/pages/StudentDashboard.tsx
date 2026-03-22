@@ -116,10 +116,6 @@ const StudentDashboard = () => {
 
   const displayName = profile?.full_name || user?.user_metadata?.full_name || "";
 
-  if (userRole === "admin") {
-    return null;
-  }
-
   // Auto-filter: only show materials matching student's course & semester
   const filtered = useMemo(() => {
     return materials.filter((m) => {
