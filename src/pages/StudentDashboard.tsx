@@ -1,20 +1,21 @@
 import { useState, useMemo, useEffect } from "react";
 import { SearchBar } from "@/components/SearchBar";
-import { FilterBar } from "@/components/FilterBar";
 import { MaterialCard } from "@/components/MaterialCard";
-import { StatsGrid } from "@/components/StatsGrid";
 import { Chatbot } from "@/components/Chatbot";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { ProfileEdit } from "@/components/ProfileEdit";
-import { GraduationCap, Bell } from "lucide-react";
+import { GraduationCap, Bell, Filter } from "lucide-react";
 import { motion } from "framer-motion";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Badge } from "@/components/ui/badge";
 
 interface MaterialWithCourse {
   id: string;
   title: string;
   type: string;
   course: string;
+  courseId: string;
   semester: number;
   subject: string;
   uploadedAt: string;
@@ -38,16 +39,21 @@ interface UserProfile {
   courses?: { name: string } | null;
 }
 
+interface CourseRow {
+  id: string;
+  name: string;
+  semesters: number;
+}
+
 const StudentDashboard = () => {
   const { user } = useAuth();
   const [search, setSearch] = useState("");
-  const [course, setCourse] = useState("all");
-  const [semester, setSemester] = useState("all");
   const [type, setType] = useState("all");
   const [materials, setMaterials] = useState<MaterialWithCourse[]>([]);
   const [loading, setLoading] = useState(true);
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [announcements, setAnnouncements] = useState<Announcement[]>([]);
+  const [dbCourses, setDbCourses] = useState<CourseRow[]>([]);
 
   useEffect(() => {
     if (user) {
@@ -55,7 +61,13 @@ const StudentDashboard = () => {
       fetchAnnouncements();
     }
     fetchMaterials();
+    fetchCourses();
   }, [user]);
+
+  const fetchCourses = async () => {
+    const { data } = await supabase.from("courses").select("id, name, semesters").order("name");
+    if (data) setDbCourses(data);
+  };
 
   const fetchProfile = async () => {
     if (!user) return;
@@ -89,6 +101,7 @@ const StudentDashboard = () => {
           title: m.title,
           type: m.type,
           course: m.courses?.name || "",
+          courseId: m.course_id,
           semester: m.semester,
           subject: m.subject,
           uploadedAt: m.created_at?.split("T")[0] || "",
@@ -103,15 +116,22 @@ const StudentDashboard = () => {
 
   const displayName = profile?.full_name || user?.user_metadata?.full_name || "";
 
+  // Auto-filter: only show materials matching student's course & semester
   const filtered = useMemo(() => {
     return materials.filter((m) => {
+      // If profile has course set, only show that course
+      if (profile?.course_id && m.courseId !== profile.course_id) return false;
+      // If profile has semester set, only show that semester
+      if (profile?.current_semester && m.semester !== profile.current_semester) return false;
+      // Search filter
       const matchesSearch = !search || m.title.toLowerCase().includes(search.toLowerCase()) || m.subject.toLowerCase().includes(search.toLowerCase());
-      const matchesCourse = course === "all" || m.course === course;
-      const matchesSemester = semester === "all" || m.semester === Number(semester);
+      // Type filter
       const matchesType = type === "all" || m.type === type;
-      return matchesSearch && matchesCourse && matchesSemester && matchesType;
+      return matchesSearch && matchesType;
     });
-  }, [search, course, semester, type, materials]);
+  }, [search, type, materials, profile]);
+
+  const profileComplete = profile?.course_id && profile?.current_semester;
 
   return (
     <div className="min-h-screen bg-background">
@@ -122,12 +142,30 @@ const StudentDashboard = () => {
             <h1 className="font-heading font-bold text-xl text-foreground">Study Hub</h1>
           </div>
           <div className="flex items-center justify-between">
-            <p className="text-sm text-muted-foreground font-body">
-              Welcome{displayName ? `, ${displayName}` : ""}! Browse and download study materials.
-            </p>
+            <div>
+              <p className="text-sm text-muted-foreground font-body">
+                Welcome{displayName ? `, ${displayName}` : ""}!
+              </p>
+              {profileComplete && (
+                <div className="flex items-center gap-2 mt-1">
+                  <Badge variant="secondary" className="text-[10px] font-body">{profile?.courses?.name}</Badge>
+                  <Badge variant="outline" className="text-[10px] font-body">Semester {profile?.current_semester}</Badge>
+                </div>
+              )}
+            </div>
             <ProfileEdit onProfileUpdated={fetchProfile} />
           </div>
         </motion.div>
+
+        {/* Profile incomplete notice */}
+        {!profileComplete && (
+          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="glass-card rounded-lg p-4 mb-6 border-l-4 border-l-accent">
+            <p className="font-heading font-semibold text-sm text-foreground">Complete your profile</p>
+            <p className="text-xs text-muted-foreground font-body mt-0.5">
+              Set your course and semester to see relevant study materials. Click "Edit Profile" above.
+            </p>
+          </motion.div>
+        )}
 
         {/* Announcements */}
         {announcements.length > 0 && (
@@ -148,11 +186,23 @@ const StudentDashboard = () => {
           </div>
         )}
 
-        <div className="mb-6"><StatsGrid /></div>
-
+        {/* Search & type filter only */}
         <div className="space-y-3 mb-6">
           <SearchBar value={search} onChange={setSearch} />
-          <FilterBar selectedCourse={course} onCourseChange={setCourse} selectedSemester={semester} onSemesterChange={setSemester} selectedType={type} onTypeChange={setType} />
+          <div className="flex items-center gap-2">
+            <Filter className="h-3.5 w-3.5 text-muted-foreground" />
+            <Select value={type} onValueChange={setType}>
+              <SelectTrigger className="w-[170px] bg-card font-body text-sm">
+                <SelectValue placeholder="All Types" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Types</SelectItem>
+                <SelectItem value="notes">Notes</SelectItem>
+                <SelectItem value="syllabus">Syllabus</SelectItem>
+                <SelectItem value="question-paper">Question Papers</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
         </div>
 
         <div className="space-y-2">
@@ -167,7 +217,11 @@ const StudentDashboard = () => {
             </div>
           ) : (
             <div className="text-center py-12">
-              <p className="text-muted-foreground font-body">No materials found. Try adjusting your filters.</p>
+              <p className="text-muted-foreground font-body">
+                {profileComplete
+                  ? "No materials uploaded for your course and semester yet."
+                  : "Set your course and semester in your profile to see materials."}
+              </p>
             </div>
           )}
         </div>
