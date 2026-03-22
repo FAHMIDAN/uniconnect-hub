@@ -46,7 +46,7 @@ interface CourseRow {
 }
 
 const StudentDashboard = () => {
-  const { user } = useAuth();
+  const { user, userRole } = useAuth();
   const [search, setSearch] = useState("");
   const [type, setType] = useState("all");
   const [materials, setMaterials] = useState<MaterialWithCourse[]>([]);
@@ -115,6 +115,10 @@ const StudentDashboard = () => {
   };
 
   const displayName = profile?.full_name || user?.user_metadata?.full_name || "";
+
+  if (userRole === "admin") {
+    return null;
+  }
 
   // Auto-filter: only show materials matching student's course & semester
   const filtered = useMemo(() => {
@@ -227,7 +231,7 @@ const StudentDashboard = () => {
         </div>
       </div>
 
-      <Chatbot userProfile={profile} />
+      {userRole === "student" && <Chatbot userProfile={profile} />}
     </div>
   );
 };
