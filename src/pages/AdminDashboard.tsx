@@ -10,9 +10,10 @@ import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Label } from "@/components/ui/label";
-import { Plus, Trash2, Shield, Upload, FileText, BookOpen, HelpCircle, Users, UserX, Bell, Send } from "lucide-react";
+import { Plus, Trash2, Shield, Upload, FileText, BookOpen, HelpCircle, Users, Bell, Send, ChevronDown, ChevronRight } from "lucide-react";
 import { motion } from "framer-motion";
 import { toast } from "sonner";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 
 const typeIcons: Record<string, any> = {
   notes: FileText,
@@ -32,17 +33,18 @@ const AdminDashboard = () => {
   const [allMaterials, setAllMaterials] = useState<MaterialRow[]>([]);
   const [users, setUsers] = useState<UserRow[]>([]);
   const [announcements, setAnnouncements] = useState<AnnouncementRow[]>([]);
-  const [dialogOpen, setDialogOpen] = useState(false);
   const [announcementDialogOpen, setAnnouncementDialogOpen] = useState(false);
 
-  // Material form
+  // Upload form per course/semester
+  const [uploadTarget, setUploadTarget] = useState<{ courseId: string; semester: number } | null>(null);
   const [newTitle, setNewTitle] = useState("");
   const [newType, setNewType] = useState("notes");
-  const [newCourse, setNewCourse] = useState("");
-  const [newSemester, setNewSemester] = useState("1");
   const [newSubject, setNewSubject] = useState("");
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [uploading, setUploading] = useState(false);
+
+  // Collapsible state for courses
+  const [openCourses, setOpenCourses] = useState<Record<string, boolean>>({});
 
   // Announcement form
   const [annTitle, setAnnTitle] = useState("");
@@ -77,8 +79,8 @@ const AdminDashboard = () => {
     if (data) setAnnouncements(data as any);
   };
 
-  const handleAdd = async () => {
-    if (!newTitle.trim() || !newCourse || !newSubject.trim()) {
+  const handleUpload = async () => {
+    if (!uploadTarget || !newTitle.trim() || !newSubject.trim()) {
       toast.error("Please fill in all fields");
       return;
     }
@@ -101,15 +103,15 @@ const AdminDashboard = () => {
     }
 
     const { error } = await supabase.from("materials").insert({
-      title: newTitle, type: newType, course_id: newCourse, semester: Number(newSemester), subject: newSubject, file_url: fileUrl, file_size: fileSize,
+      title: newTitle, type: newType, course_id: uploadTarget.courseId, semester: uploadTarget.semester, subject: newSubject, file_url: fileUrl, file_size: fileSize,
     });
 
     if (error) {
       toast.error("Failed to add material: " + error.message);
     } else {
-      toast.success("Material added successfully");
-      setDialogOpen(false);
-      setNewTitle(""); setNewSubject(""); setSelectedFile(null);
+      toast.success("Material uploaded!");
+      setUploadTarget(null);
+      setNewTitle(""); setNewSubject(""); setSelectedFile(null); setNewType("notes");
       fetchMaterials();
     }
     setUploading(false);
@@ -128,13 +130,10 @@ const AdminDashboard = () => {
     }
     setAnnSending(true);
     const { error } = await supabase.from("announcements").insert({
-      title: annTitle,
-      message: annMessage,
-      course_id: annCourse === "all" ? null : annCourse,
-      created_by: user!.id,
+      title: annTitle, message: annMessage, course_id: annCourse === "all" ? null : annCourse, created_by: user!.id,
     });
     if (error) {
-      toast.error("Failed to send announcement: " + error.message);
+      toast.error("Failed to send: " + error.message);
     } else {
       toast.success("Announcement sent!");
       setAnnouncementDialogOpen(false);
@@ -147,8 +146,14 @@ const AdminDashboard = () => {
   const handleDeleteAnnouncement = async (id: string) => {
     const { error } = await supabase.from("announcements").delete().eq("id", id);
     if (error) toast.error("Delete failed");
-    else { toast.success("Announcement deleted"); fetchAnnouncements(); }
+    else { toast.success("Deleted"); fetchAnnouncements(); }
   };
+
+  const getMaterialsForCourseSemester = (courseId: string, semester: number) =>
+    allMaterials.filter((m) => m.course_id === courseId && m.semester === semester);
+
+  const toggleCourse = (courseId: string) =>
+    setOpenCourses((prev) => ({ ...prev, [courseId]: !prev[courseId] }));
 
   if (userRole !== "admin") {
     return (
@@ -173,112 +178,39 @@ const AdminDashboard = () => {
             </div>
             <p className="text-sm text-muted-foreground font-body">Manage materials, users, and announcements</p>
           </div>
-          <div className="flex gap-2">
-            <Dialog open={announcementDialogOpen} onOpenChange={setAnnouncementDialogOpen}>
-              <DialogTrigger asChild>
-                <Button variant="outline" className="font-body gap-1.5">
-                  <Bell className="h-4 w-4" /> Send Announcement
-                </Button>
-              </DialogTrigger>
-              <DialogContent className="sm:max-w-md">
-                <DialogHeader>
-                  <DialogTitle className="font-heading">Send Announcement</DialogTitle>
-                </DialogHeader>
-                <div className="space-y-4 pt-2">
-                  <div>
-                    <Label className="font-body text-sm">Title</Label>
-                    <Input value={annTitle} onChange={(e) => setAnnTitle(e.target.value)} placeholder="Announcement title" className="mt-1 font-body" />
-                  </div>
-                  <div>
-                    <Label className="font-body text-sm">Message</Label>
-                    <Textarea value={annMessage} onChange={(e) => setAnnMessage(e.target.value)} placeholder="Write your message..." className="mt-1 font-body" rows={4} />
-                  </div>
-                  <div>
-                    <Label className="font-body text-sm">Target Course (optional)</Label>
-                    <Select value={annCourse} onValueChange={setAnnCourse}>
-                      <SelectTrigger className="mt-1 font-body"><SelectValue /></SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="all">All Courses</SelectItem>
-                        {courses.map((c) => (
-                          <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <Button onClick={handleSendAnnouncement} disabled={annSending} className="w-full gradient-primary text-primary-foreground font-body gap-1.5">
-                    <Send className="h-4 w-4" />
-                    {annSending ? "Sending..." : "Send Announcement"}
-                  </Button>
+          <Dialog open={announcementDialogOpen} onOpenChange={setAnnouncementDialogOpen}>
+            <DialogTrigger asChild>
+              <Button variant="outline" className="font-body gap-1.5">
+                <Bell className="h-4 w-4" /> Send Announcement
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="sm:max-w-md">
+              <DialogHeader><DialogTitle className="font-heading">Send Announcement</DialogTitle></DialogHeader>
+              <div className="space-y-4 pt-2">
+                <div>
+                  <Label className="font-body text-sm">Title</Label>
+                  <Input value={annTitle} onChange={(e) => setAnnTitle(e.target.value)} placeholder="Announcement title" className="mt-1 font-body" />
                 </div>
-              </DialogContent>
-            </Dialog>
-
-            <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-              <DialogTrigger asChild>
-                <Button className="gradient-primary text-primary-foreground font-body gap-1.5">
-                  <Plus className="h-4 w-4" /> Add Material
-                </Button>
-              </DialogTrigger>
-              <DialogContent className="sm:max-w-md">
-                <DialogHeader>
-                  <DialogTitle className="font-heading">Upload New Material</DialogTitle>
-                </DialogHeader>
-                <div className="space-y-4 pt-2">
-                  <div>
-                    <Label className="font-body text-sm">Title</Label>
-                    <Input value={newTitle} onChange={(e) => setNewTitle(e.target.value)} placeholder="e.g. Data Structures Notes" className="mt-1 font-body" />
-                  </div>
-                  <div>
-                    <Label className="font-body text-sm">Type</Label>
-                    <Select value={newType} onValueChange={setNewType}>
-                      <SelectTrigger className="mt-1 font-body"><SelectValue /></SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="notes">Notes</SelectItem>
-                        <SelectItem value="syllabus">Syllabus</SelectItem>
-                        <SelectItem value="question-paper">Question Paper</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div>
-                    <Label className="font-body text-sm">Course</Label>
-                    <Select value={newCourse} onValueChange={setNewCourse}>
-                      <SelectTrigger className="mt-1 font-body"><SelectValue placeholder="Select course" /></SelectTrigger>
-                      <SelectContent>
-                        {courses.map((c) => (
-                          <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div className="grid grid-cols-2 gap-3">
-                    <div>
-                      <Label className="font-body text-sm">Semester</Label>
-                      <Select value={newSemester} onValueChange={setNewSemester}>
-                        <SelectTrigger className="mt-1 font-body"><SelectValue /></SelectTrigger>
-                        <SelectContent>
-                          {Array.from({ length: 8 }, (_, i) => (
-                            <SelectItem key={i + 1} value={String(i + 1)}>Semester {i + 1}</SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    <div>
-                      <Label className="font-body text-sm">Subject</Label>
-                      <Input value={newSubject} onChange={(e) => setNewSubject(e.target.value)} placeholder="Subject name" className="mt-1 font-body" />
-                    </div>
-                  </div>
-                  <div>
-                    <Label className="font-body text-sm">PDF File</Label>
-                    <Input type="file" accept=".pdf" onChange={(e) => setSelectedFile(e.target.files?.[0] || null)} className="mt-1 font-body" />
-                  </div>
-                  <Button onClick={handleAdd} disabled={uploading} className="w-full gradient-primary text-primary-foreground font-body gap-1.5">
-                    <Upload className="h-4 w-4" />
-                    {uploading ? "Uploading..." : "Upload Material"}
-                  </Button>
+                <div>
+                  <Label className="font-body text-sm">Message</Label>
+                  <Textarea value={annMessage} onChange={(e) => setAnnMessage(e.target.value)} placeholder="Write your message..." className="mt-1 font-body" rows={4} />
                 </div>
-              </DialogContent>
-            </Dialog>
-          </div>
+                <div>
+                  <Label className="font-body text-sm">Target Course</Label>
+                  <Select value={annCourse} onValueChange={setAnnCourse}>
+                    <SelectTrigger className="mt-1 font-body"><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All Courses</SelectItem>
+                      {courses.map((c) => (<SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <Button onClick={handleSendAnnouncement} disabled={annSending} className="w-full gradient-primary text-primary-foreground font-body gap-1.5">
+                  <Send className="h-4 w-4" /> {annSending ? "Sending..." : "Send Announcement"}
+                </Button>
+              </div>
+            </DialogContent>
+          </Dialog>
         </motion.div>
 
         {/* Stats */}
@@ -309,47 +241,71 @@ const AdminDashboard = () => {
           </TabsList>
 
           <TabsContent value="materials">
-            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="glass-card rounded-lg overflow-hidden">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead className="font-heading text-xs">Title</TableHead>
-                    <TableHead className="font-heading text-xs">Type</TableHead>
-                    <TableHead className="font-heading text-xs hidden md:table-cell">Course</TableHead>
-                    <TableHead className="font-heading text-xs hidden sm:table-cell">Sem</TableHead>
-                    <TableHead className="font-heading text-xs hidden lg:table-cell">Downloads</TableHead>
-                    <TableHead className="font-heading text-xs w-20">Actions</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {allMaterials.map((m) => {
-                    const TypeIcon = typeIcons[m.type] || FileText;
-                    return (
-                      <TableRow key={m.id}>
-                        <TableCell className="font-body text-sm font-medium">
-                          <div className="flex items-center gap-2">
-                            <TypeIcon className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
-                            <span className="truncate max-w-[200px]">{m.title}</span>
+            <div className="space-y-3">
+              {courses.map((course) => (
+                <Collapsible key={course.id} open={openCourses[course.id]} onOpenChange={() => toggleCourse(course.id)}>
+                  <CollapsibleTrigger asChild>
+                    <button className="w-full glass-card rounded-lg p-4 flex items-center justify-between hover:bg-muted/50 transition-colors">
+                      <div className="flex items-center gap-3">
+                        <BookOpen className="h-4 w-4 text-primary" />
+                        <div className="text-left">
+                          <p className="font-heading font-semibold text-sm text-foreground">{course.name}</p>
+                          <p className="text-xs text-muted-foreground font-body">{course.code} • {course.semesters} semesters • {allMaterials.filter(m => m.course_id === course.id).length} materials</p>
+                        </div>
+                      </div>
+                      {openCourses[course.id] ? <ChevronDown className="h-4 w-4 text-muted-foreground" /> : <ChevronRight className="h-4 w-4 text-muted-foreground" />}
+                    </button>
+                  </CollapsibleTrigger>
+                  <CollapsibleContent>
+                    <div className="ml-4 mt-2 space-y-2">
+                      {Array.from({ length: course.semesters }, (_, i) => i + 1).map((sem) => {
+                        const semMaterials = getMaterialsForCourseSemester(course.id, sem);
+                        return (
+                          <div key={sem} className="glass-card rounded-lg p-3">
+                            <div className="flex items-center justify-between mb-2">
+                              <p className="font-heading font-medium text-sm text-foreground">Semester {sem}</p>
+                              <div className="flex items-center gap-2">
+                                <Badge variant="secondary" className="text-[10px] font-body">{semMaterials.length} files</Badge>
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  className="h-7 text-xs font-body gap-1"
+                                  onClick={() => setUploadTarget({ courseId: course.id, semester: sem })}
+                                >
+                                  <Plus className="h-3 w-3" /> Upload
+                                </Button>
+                              </div>
+                            </div>
+                            {semMaterials.length > 0 && (
+                              <div className="space-y-1">
+                                {semMaterials.map((m) => {
+                                  const TypeIcon = typeIcons[m.type] || FileText;
+                                  return (
+                                    <div key={m.id} className="flex items-center justify-between py-1.5 px-2 rounded-md hover:bg-muted/30 transition-colors">
+                                      <div className="flex items-center gap-2 min-w-0">
+                                        <TypeIcon className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
+                                        <span className="font-body text-xs text-foreground truncate">{m.title}</span>
+                                        <Badge variant="secondary" className="text-[9px] font-body capitalize shrink-0">{m.type.replace("-", " ")}</Badge>
+                                      </div>
+                                      <Button variant="ghost" size="icon" className="h-6 w-6 shrink-0" onClick={() => handleDelete(m.id)}>
+                                        <Trash2 className="h-3 w-3 text-destructive" />
+                                      </Button>
+                                    </div>
+                                  );
+                                })}
+                              </div>
+                            )}
                           </div>
-                        </TableCell>
-                        <TableCell><Badge variant="secondary" className="text-[10px] font-body capitalize">{m.type.replace("-", " ")}</Badge></TableCell>
-                        <TableCell className="font-body text-xs text-muted-foreground hidden md:table-cell">{m.courses?.name}</TableCell>
-                        <TableCell className="font-body text-xs hidden sm:table-cell">{m.semester}</TableCell>
-                        <TableCell className="font-body text-xs hidden lg:table-cell">{m.download_count}</TableCell>
-                        <TableCell>
-                          <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => handleDelete(m.id)}>
-                            <Trash2 className="h-3.5 w-3.5 text-destructive" />
-                          </Button>
-                        </TableCell>
-                      </TableRow>
-                    );
-                  })}
-                  {allMaterials.length === 0 && (
-                    <TableRow><TableCell colSpan={6} className="text-center py-8 text-muted-foreground font-body">No materials yet.</TableCell></TableRow>
-                  )}
-                </TableBody>
-              </Table>
-            </motion.div>
+                        );
+                      })}
+                    </div>
+                  </CollapsibleContent>
+                </Collapsible>
+              ))}
+              {courses.length === 0 && (
+                <div className="text-center py-12 text-muted-foreground font-body">No courses found. Add courses to get started.</div>
+              )}
+            </div>
           </TabsContent>
 
           <TabsContent value="users">
@@ -417,6 +373,47 @@ const AdminDashboard = () => {
           </TabsContent>
         </Tabs>
       </div>
+
+      {/* Upload Dialog */}
+      <Dialog open={!!uploadTarget} onOpenChange={(open) => { if (!open) setUploadTarget(null); }}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="font-heading">
+              Upload to {courses.find(c => c.id === uploadTarget?.courseId)?.name} — Semester {uploadTarget?.semester}
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 pt-2">
+            <div>
+              <Label className="font-body text-sm">Title</Label>
+              <Input value={newTitle} onChange={(e) => setNewTitle(e.target.value)} placeholder="e.g. Data Structures Notes" className="mt-1 font-body" />
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <Label className="font-body text-sm">Type</Label>
+                <Select value={newType} onValueChange={setNewType}>
+                  <SelectTrigger className="mt-1 font-body"><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="notes">Notes</SelectItem>
+                    <SelectItem value="syllabus">Syllabus</SelectItem>
+                    <SelectItem value="question-paper">Question Paper</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <Label className="font-body text-sm">Subject</Label>
+                <Input value={newSubject} onChange={(e) => setNewSubject(e.target.value)} placeholder="Subject name" className="mt-1 font-body" />
+              </div>
+            </div>
+            <div>
+              <Label className="font-body text-sm">PDF File</Label>
+              <Input type="file" accept=".pdf" onChange={(e) => setSelectedFile(e.target.files?.[0] || null)} className="mt-1 font-body" />
+            </div>
+            <Button onClick={handleUpload} disabled={uploading} className="w-full gradient-primary text-primary-foreground font-body gap-1.5">
+              <Upload className="h-4 w-4" /> {uploading ? "Uploading..." : "Upload Material"}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
