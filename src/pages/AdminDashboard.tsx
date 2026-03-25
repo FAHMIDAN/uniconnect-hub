@@ -22,7 +22,7 @@ const typeIcons: Record<string, any> = {
 };
 
 interface CourseRow { id: string; name: string; code: string; semesters: number; }
-interface MaterialRow { id: string; title: string; type: string; course_id: string; semester: number; subject: string; file_url: string | null; file_size: string | null; download_count: number | null; created_at: string; courses?: { name: string } | null; }
+interface MaterialRow { id: string; title: string; type: string; course_id: string; semester: number; subject: string; file_url: string | null; file_size: string | null; download_count: number | null; created_at: string; uploaded_by: string | null; courses?: { name: string } | null; uploader?: { full_name: string | null; email: string | null } | null; }
 interface UserRow { user_id: string; full_name: string | null; email: string | null; created_at: string; current_semester: number | null; courses?: { name: string } | null; }
 interface AnnouncementRow { id: string; title: string; message: string; course_id: string | null; created_at: string; courses?: { name: string } | null; }
 
@@ -66,7 +66,29 @@ const AdminDashboard = () => {
 
   const fetchMaterials = async () => {
     const { data } = await supabase.from("materials").select("*, courses(name)").order("created_at", { ascending: false });
-    if (data) setAllMaterials(data as any);
+    if (data) {
+      // Fetch uploader profiles for all materials
+      const uploaderIds = [...new Set(data.filter(m => m.uploaded_by).map(m => m.uploaded_by!))];
+      let profileMap: Record<string, { full_name: string | null; email: string | null }> = {};
+      if (uploaderIds.length > 0) {
+        const { data: profiles } = await supabase.from("profiles").select("user_id, full_name, email").in("user_id", uploaderIds);
+        if (profiles) {
+          profiles.forEach(p => { profileMap[p.user_id] = { full_name: p.full_name, email: p.email }; });
+        }
+      }
+      // Fetch roles for uploaders
+      let roleMap: Record<string, string> = {};
+      if (uploaderIds.length > 0) {
+        const { data: roles } = await supabase.from("user_roles").select("user_id, role").in("user_id", uploaderIds);
+        if (roles) {
+          roles.forEach(r => { roleMap[r.user_id] = r.role; });
+        }
+      }
+      setAllMaterials(data.map(m => ({
+        ...m,
+        uploader: m.uploaded_by ? { ...profileMap[m.uploaded_by], role: roleMap[m.uploaded_by] || 'student' } : null,
+      })) as any);
+    }
   };
 
   const fetchUsers = async () => {
@@ -260,8 +282,6 @@ const AdminDashboard = () => {
                     <div className="ml-4 mt-2 space-y-2">
                       {Array.from({ length: course.semesters }, (_, i) => i + 1).map((sem) => {
                         const semMaterials = getMaterialsForCourseSemester(course.id, sem);
-                    console.log(semMaterials,'semMaterials');
-                    
                         return (
                           <div key={sem} className="glass-card rounded-lg p-3">
                             <div className="flex items-center justify-between mb-2">
@@ -284,32 +304,36 @@ const AdminDashboard = () => {
                                   const TypeIcon = typeIcons[m.type] || FileText;
                                   return (
                                     <div key={m.id} className="flex items-center justify-between py-1.5 px-2 rounded-md hover:bg-muted/30 transition-colors">
-                                      <div className="flex items-center gap-2 min-w-0">
+                                      <div className="flex items-center gap-2 min-w-0 flex-1">
                                         <TypeIcon className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
                                         <span className="font-body text-xs text-foreground truncate">{m.title}</span>
                                         <Badge variant="secondary" className="text-[9px] font-body capitalize shrink-0">{m.type.replace("-", " ")}</Badge>
+                                        {(m as any).uploader && (
+                                          <span className="text-[10px] text-muted-foreground shrink-0">
+                                            by {(m as any).uploader.full_name || (m as any).uploader.email || "Unknown"}
+                                            <Badge variant="outline" className="ml-1 text-[9px] px-1 py-0">{(m as any).uploader.role === "admin" ? "Faculty" : "Student"}</Badge>
+                                          </span>
+                                        )}
                                       </div>
-        <div className="flex flex-col gap-1 shrink-0">
-
-                                      <Button variant="ghost" size="icon" className="h-6 w-6 shrink-0" onClick={() => handleDelete(m.id)}>
-                                        <Trash2 className="h-3 w-3 text-destructive" />
-                                      </Button>
-                                      <Button
-                                                  variant="ghost"
-                                                  size="icon"
-                                                  className="h-8 w-8"
-                                                  onClick={() => {
-                                                    if (semMaterials.file_url) {
-                                                      window.open(semMaterials.file_url, "_blank");
-                                                    } else {
-                                                      import("sonner").then(({ toast }) => toast.error("No file available for download"));
-                                                    }
-                                                  }}
-                                                >
-                                                  <Download className="h-4 w-4 text-primary" />
-                                                </Button>
+                                      <div className="flex items-center gap-1 shrink-0">
+                                        <Button
+                                          variant="ghost"
+                                          size="icon"
+                                          className="h-6 w-6"
+                                          onClick={() => {
+                                            if (m.file_url) {
+                                              window.open(m.file_url, "_blank");
+                                            } else {
+                                              toast.error("No file available for download");
+                                            }
+                                          }}
+                                        >
+                                          <Download className="h-3 w-3 text-primary" />
+                                        </Button>
+                                        <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => handleDelete(m.id)}>
+                                          <Trash2 className="h-3 w-3 text-destructive" />
+                                        </Button>
                                       </div>
-
                                     </div>
                                   );
                                 })}
