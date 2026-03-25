@@ -10,7 +10,7 @@ import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Label } from "@/components/ui/label";
-import { Plus, Trash2, Shield, Upload, FileText, BookOpen, HelpCircle, Users, Bell, Send, ChevronDown, ChevronRight } from "lucide-react";
+import { Plus, Trash2, Shield, Upload, FileText, BookOpen, HelpCircle, Users, Bell, Send, ChevronDown, ChevronRight, Download } from "lucide-react";
 import { motion } from "framer-motion";
 import { toast } from "sonner";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
@@ -260,6 +260,8 @@ const AdminDashboard = () => {
                     <div className="ml-4 mt-2 space-y-2">
                       {Array.from({ length: course.semesters }, (_, i) => i + 1).map((sem) => {
                         const semMaterials = getMaterialsForCourseSemester(course.id, sem);
+                    console.log(semMaterials,'semMaterials');
+                    
                         return (
                           <div key={sem} className="glass-card rounded-lg p-3">
                             <div className="flex items-center justify-between mb-2">
@@ -287,9 +289,27 @@ const AdminDashboard = () => {
                                         <span className="font-body text-xs text-foreground truncate">{m.title}</span>
                                         <Badge variant="secondary" className="text-[9px] font-body capitalize shrink-0">{m.type.replace("-", " ")}</Badge>
                                       </div>
+        <div className="flex flex-col gap-1 shrink-0">
+
                                       <Button variant="ghost" size="icon" className="h-6 w-6 shrink-0" onClick={() => handleDelete(m.id)}>
                                         <Trash2 className="h-3 w-3 text-destructive" />
                                       </Button>
+                                      <Button
+                                                  variant="ghost"
+                                                  size="icon"
+                                                  className="h-8 w-8"
+                                                  onClick={() => {
+                                                    if (semMaterials.file_url) {
+                                                      window.open(semMaterials.file_url, "_blank");
+                                                    } else {
+                                                      import("sonner").then(({ toast }) => toast.error("No file available for download"));
+                                                    }
+                                                  }}
+                                                >
+                                                  <Download className="h-4 w-4 text-primary" />
+                                                </Button>
+                                      </div>
+
                                     </div>
                                   );
                                 })}
