@@ -22,7 +22,7 @@ const typeIcons: Record<string, any> = {
 };
 
 interface CourseRow { id: string; name: string; code: string; semesters: number; }
-interface MaterialRow { id: string; title: string; type: string; course_id: string; semester: number; subject: string; file_url: string | null; file_size: string | null; download_count: number | null; created_at: string; courses?: { name: string } | null; }
+interface MaterialRow { id: string; title: string; type: string; course_id: string; semester: number; subject: string; file_url: string | null; file_size: string | null; download_count: number | null; created_at: string; uploaded_by: string | null; courses?: { name: string } | null; uploader?: { full_name: string | null; email: string | null } | null; }
 interface UserRow { user_id: string; full_name: string | null; email: string | null; created_at: string; current_semester: number | null; courses?: { name: string } | null; }
 interface AnnouncementRow { id: string; title: string; message: string; course_id: string | null; created_at: string; courses?: { name: string } | null; }
 
