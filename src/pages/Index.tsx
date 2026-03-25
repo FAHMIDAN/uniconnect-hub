@@ -126,6 +126,11 @@ const Index = () => {
             </TabsContent>
           </Tabs>
 
+          <div className="text-center mt-4">
+            <a href="/admin-login" className="text-xs text-muted-foreground hover:text-foreground font-body transition-colors">
+              Admin Access →
+            </a>
+          </div>
         </div>
       </motion.div>
     </div>

@@ -61,7 +61,18 @@ export function MaterialCard({ material, index = 0 }: MaterialCardProps) {
               <Bookmark className="h-4 w-4 text-muted-foreground" />
             )}
           </Button>
-          <Button variant="ghost" size="icon" className="h-8 w-8">
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-8 w-8"
+            onClick={() => {
+              if (material.fileUrl) {
+                window.open(material.fileUrl, "_blank");
+              } else {
+                import("sonner").then(({ toast }) => toast.error("No file available for download"));
+              }
+            }}
+          >
             <Download className="h-4 w-4 text-primary" />
           </Button>
         </div>
