@@ -1,11 +1,11 @@
 import { useState, useEffect } from "react";
-import { useNavigate, Link } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { GraduationCap, LogIn, UserPlus, Shield } from "lucide-react";
+import { GraduationCap, LogIn, UserPlus } from "lucide-react";
 import { toast } from "sonner";
 import { motion } from "framer-motion";
 
@@ -126,11 +126,6 @@ const Index = () => {
             </TabsContent>
           </Tabs>
 
-          <div className="mt-4 pt-4 border-t border-border text-center">
-            <Link to="/admin-login" className="text-xs text-muted-foreground hover:text-foreground font-body inline-flex items-center gap-1 transition-colors">
-              <Shield className="h-3 w-3" /> Admin Login
-            </Link>
-          </div>
         </div>
       </motion.div>
     </div>

@@ -1,5 +1,5 @@
 import { Link, useLocation, useNavigate } from "react-router-dom";
-import { GraduationCap, BookOpen, Shield, Home, LogIn, LogOut } from "lucide-react";
+import { GraduationCap, BookOpen, Shield, LogIn, LogOut } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/contexts/AuthContext";
 import { motion } from "framer-motion";
@@ -33,14 +33,9 @@ export function AppHeader() {
 
         <nav className="flex items-center gap-1">
           {!user && (
-            <>
-              <Button variant={isActive("/") ? "secondary" : "ghost"} size="sm" asChild className="font-body text-xs gap-1.5">
-                <Link to="/"><LogIn className="h-3.5 w-3.5" />Login</Link>
-              </Button>
-              <Button variant={isActive("/admin-login") ? "secondary" : "ghost"} size="sm" asChild className="font-body text-xs gap-1.5">
-                <Link to="/admin-login"><Shield className="h-3.5 w-3.5" />Admin</Link>
-              </Button>
-            </>
+            <Button variant={isActive("/") ? "secondary" : "ghost"} size="sm" asChild className="font-body text-xs gap-1.5">
+              <Link to="/"><LogIn className="h-3.5 w-3.5" />Login</Link>
+            </Button>
           )}
           {user && userRole === "student" && (
             <Button variant={isActive("/dashboard") ? "secondary" : "ghost"} size="sm" asChild className="font-body text-xs gap-1.5">
