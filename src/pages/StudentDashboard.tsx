@@ -5,10 +5,15 @@ import { Chatbot } from "@/components/Chatbot";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { ProfileEdit } from "@/components/ProfileEdit";
-import { GraduationCap, Bell, Filter } from "lucide-react";
+import { GraduationCap, Bell, Filter, Plus, Upload } from "lucide-react";
 import { motion } from "framer-motion";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { toast } from "sonner";
 
 interface MaterialWithCourse {
   id: string;
@@ -22,6 +27,7 @@ interface MaterialWithCourse {
   fileSize: string;
   downloadCount: number;
   fileUrl?: string;
+  uploadedBy?: string;
 }
 
 interface Announcement {
@@ -39,12 +45,6 @@ interface UserProfile {
   courses?: { name: string } | null;
 }
 
-interface CourseRow {
-  id: string;
-  name: string;
-  semesters: number;
-}
-
 const StudentDashboard = () => {
   const { user, userRole } = useAuth();
   const [search, setSearch] = useState("");
@@ -53,7 +53,14 @@ const StudentDashboard = () => {
   const [loading, setLoading] = useState(true);
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [announcements, setAnnouncements] = useState<Announcement[]>([]);
-  const [dbCourses, setDbCourses] = useState<CourseRow[]>([]);
+
+  // Upload state
+  const [uploadOpen, setUploadOpen] = useState(false);
+  const [newTitle, setNewTitle] = useState("");
+  const [newType, setNewType] = useState("notes");
+  const [newSubject, setNewSubject] = useState("");
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [uploading, setUploading] = useState(false);
 
   useEffect(() => {
     if (user) {
@@ -61,13 +68,7 @@ const StudentDashboard = () => {
       fetchAnnouncements();
     }
     fetchMaterials();
-    fetchCourses();
   }, [user]);
-
-  const fetchCourses = async () => {
-    const { data } = await supabase.from("courses").select("id, name, semesters").order("name");
-    if (data) setDbCourses(data);
-  };
 
   const fetchProfile = async () => {
     if (!user) return;
@@ -95,6 +96,22 @@ const StudentDashboard = () => {
       .order("created_at", { ascending: false });
 
     if (!error && data) {
+      // Collect unique uploader IDs
+      const uploaderIds = [...new Set(data.map((m: any) => m.uploaded_by).filter(Boolean))];
+      let uploaderMap: Record<string, string> = {};
+
+      if (uploaderIds.length > 0) {
+        const { data: profiles } = await supabase
+          .from("profiles")
+          .select("user_id, full_name")
+          .in("user_id", uploaderIds);
+        if (profiles) {
+          profiles.forEach((p: any) => {
+            uploaderMap[p.user_id] = p.full_name || "Unknown";
+          });
+        }
+      }
+
       setMaterials(
         data.map((m: any) => ({
           id: m.id,
@@ -108,24 +125,72 @@ const StudentDashboard = () => {
           fileSize: m.file_size || "N/A",
           downloadCount: m.download_count || 0,
           fileUrl: m.file_url,
+          uploadedBy: m.uploaded_by ? uploaderMap[m.uploaded_by] || "Admin" : "Admin",
         }))
       );
     }
     setLoading(false);
   };
 
+  const handleUpload = async () => {
+    if (!profile?.course_id || !profile?.current_semester) {
+      toast.error("Please complete your profile first (set course & semester)");
+      return;
+    }
+    if (!newTitle.trim() || !newSubject.trim()) {
+      toast.error("Please fill in title and subject");
+      return;
+    }
+    setUploading(true);
+
+    let fileUrl: string | null = null;
+    let fileSize: string | null = null;
+
+    if (selectedFile) {
+      const filePath = `${Date.now()}_${selectedFile.name}`;
+      const { error: uploadError } = await supabase.storage.from("materials").upload(filePath, selectedFile);
+      if (uploadError) {
+        toast.error("File upload failed: " + uploadError.message);
+        setUploading(false);
+        return;
+      }
+      const { data: urlData } = supabase.storage.from("materials").getPublicUrl(filePath);
+      fileUrl = urlData.publicUrl;
+      fileSize = `${(selectedFile.size / (1024 * 1024)).toFixed(1)} MB`;
+    }
+
+    const { error } = await supabase.from("materials").insert({
+      title: newTitle,
+      type: newType,
+      course_id: profile.course_id,
+      semester: profile.current_semester,
+      subject: newSubject,
+      file_url: fileUrl,
+      file_size: fileSize,
+      uploaded_by: user!.id,
+    });
+
+    if (error) {
+      toast.error("Upload failed: " + error.message);
+    } else {
+      toast.success("Material uploaded!");
+      setUploadOpen(false);
+      setNewTitle("");
+      setNewSubject("");
+      setSelectedFile(null);
+      setNewType("notes");
+      fetchMaterials();
+    }
+    setUploading(false);
+  };
+
   const displayName = profile?.full_name || user?.user_metadata?.full_name || "";
 
-  // Auto-filter: only show materials matching student's course & semester
   const filtered = useMemo(() => {
     return materials.filter((m) => {
-      // If profile has course set, only show that course
       if (profile?.course_id && m.courseId !== profile.course_id) return false;
-      // If profile has semester set, only show that semester
       if (profile?.current_semester && m.semester !== profile.current_semester) return false;
-      // Search filter
       const matchesSearch = !search || m.title.toLowerCase().includes(search.toLowerCase()) || m.subject.toLowerCase().includes(search.toLowerCase());
-      // Type filter
       const matchesType = type === "all" || m.type === type;
       return matchesSearch && matchesType;
     });
@@ -153,11 +218,17 @@ const StudentDashboard = () => {
                 </div>
               )}
             </div>
-            <ProfileEdit onProfileUpdated={fetchProfile} />
+            <div className="flex items-center gap-2">
+              {profileComplete && (
+                <Button size="sm" variant="outline" className="font-body text-xs gap-1.5" onClick={() => setUploadOpen(true)}>
+                  <Plus className="h-3.5 w-3.5" /> Upload Material
+                </Button>
+              )}
+              <ProfileEdit onProfileUpdated={fetchProfile} />
+            </div>
           </div>
         </motion.div>
 
-        {/* Profile incomplete notice */}
         {!profileComplete && (
           <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="glass-card rounded-lg p-4 mb-6 border-l-4 border-l-accent">
             <p className="font-heading font-semibold text-sm text-foreground">Complete your profile</p>
@@ -167,7 +238,6 @@ const StudentDashboard = () => {
           </motion.div>
         )}
 
-        {/* Announcements */}
         {announcements.length > 0 && (
           <div className="mb-6 space-y-2">
             {announcements.map((a) => (
@@ -186,7 +256,6 @@ const StudentDashboard = () => {
           </div>
         )}
 
-        {/* Search & type filter only */}
         <div className="space-y-3 mb-6">
           <SearchBar value={search} onChange={setSearch} />
           <div className="flex items-center gap-2">
@@ -228,6 +297,48 @@ const StudentDashboard = () => {
       </div>
 
       {userRole === "student" && <Chatbot userProfile={profile} />}
+
+      {/* Student Upload Dialog */}
+      <Dialog open={uploadOpen} onOpenChange={setUploadOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="font-heading">Upload Study Material</DialogTitle>
+          </DialogHeader>
+          <p className="text-xs text-muted-foreground font-body">
+            Uploading to <span className="font-semibold text-foreground">{profile?.courses?.name}</span> — Semester {profile?.current_semester}
+          </p>
+          <div className="space-y-4 pt-2">
+            <div>
+              <Label className="font-body text-sm">Title</Label>
+              <Input value={newTitle} onChange={(e) => setNewTitle(e.target.value)} placeholder="e.g. Data Structures Notes" className="mt-1 font-body" />
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <Label className="font-body text-sm">Type</Label>
+                <Select value={newType} onValueChange={setNewType}>
+                  <SelectTrigger className="mt-1 font-body"><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="notes">Notes</SelectItem>
+                    <SelectItem value="syllabus">Syllabus</SelectItem>
+                    <SelectItem value="question-paper">Question Paper</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <Label className="font-body text-sm">Subject</Label>
+                <Input value={newSubject} onChange={(e) => setNewSubject(e.target.value)} placeholder="Subject name" className="mt-1 font-body" />
+              </div>
+            </div>
+            <div>
+              <Label className="font-body text-sm">PDF File</Label>
+              <Input type="file" accept=".pdf" onChange={(e) => setSelectedFile(e.target.files?.[0] || null)} className="mt-1 font-body" />
+            </div>
+            <Button onClick={handleUpload} disabled={uploading} className="w-full gradient-primary text-primary-foreground font-body gap-1.5">
+              <Upload className="h-4 w-4" /> {uploading ? "Uploading..." : "Upload Material"}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
