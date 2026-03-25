@@ -66,7 +66,29 @@ const AdminDashboard = () => {
 
   const fetchMaterials = async () => {
     const { data } = await supabase.from("materials").select("*, courses(name)").order("created_at", { ascending: false });
-    if (data) setAllMaterials(data as any);
+    if (data) {
+      // Fetch uploader profiles for all materials
+      const uploaderIds = [...new Set(data.filter(m => m.uploaded_by).map(m => m.uploaded_by!))];
+      let profileMap: Record<string, { full_name: string | null; email: string | null }> = {};
+      if (uploaderIds.length > 0) {
+        const { data: profiles } = await supabase.from("profiles").select("user_id, full_name, email").in("user_id", uploaderIds);
+        if (profiles) {
+          profiles.forEach(p => { profileMap[p.user_id] = { full_name: p.full_name, email: p.email }; });
+        }
+      }
+      // Fetch roles for uploaders
+      let roleMap: Record<string, string> = {};
+      if (uploaderIds.length > 0) {
+        const { data: roles } = await supabase.from("user_roles").select("user_id, role").in("user_id", uploaderIds);
+        if (roles) {
+          roles.forEach(r => { roleMap[r.user_id] = r.role; });
+        }
+      }
+      setAllMaterials(data.map(m => ({
+        ...m,
+        uploader: m.uploaded_by ? { ...profileMap[m.uploaded_by], role: roleMap[m.uploaded_by] || 'student' } : null,
+      })) as any);
+    }
   };
 
   const fetchUsers = async () => {
