@@ -35,7 +35,10 @@ export function MaterialCard({ material, index = 0 }: MaterialCardProps) {
           </div>
           <div className="min-w-0 flex-1">
             <h3 className="font-heading font-semibold text-sm text-foreground truncate">{material.title}</h3>
-            <p className="text-xs text-muted-foreground mt-0.5">{material.subject} • Sem {material.semester}</p>
+            <p className="text-xs text-muted-foreground mt-0.5">
+              {material.subject} • Sem {material.semester}
+              {material.uploadedBy && <span> • by {material.uploadedBy}</span>}
+            </p>
             <div className="flex items-center gap-2 mt-2">
               <Badge variant="secondary" className="text-[10px] font-body">{config.label}</Badge>
               <span className="text-[10px] text-muted-foreground">{material.fileSize}</span>

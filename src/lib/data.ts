@@ -9,6 +9,8 @@ export interface StudyMaterial {
   fileSize: string;
   downloadCount: number;
   isBookmarked?: boolean;
+  uploadedBy?: string;
+  fileUrl?: string;
 }
 
 export interface Course {
