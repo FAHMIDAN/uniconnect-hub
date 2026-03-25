@@ -103,7 +103,7 @@ const AdminDashboard = () => {
     }
 
     const { error } = await supabase.from("materials").insert({
-      title: newTitle, type: newType, course_id: uploadTarget.courseId, semester: uploadTarget.semester, subject: newSubject, file_url: fileUrl, file_size: fileSize,
+      title: newTitle, type: newType, course_id: uploadTarget.courseId, semester: uploadTarget.semester, subject: newSubject, file_url: fileUrl, file_size: fileSize, uploaded_by: user!.id,
     });
 
     if (error) {
