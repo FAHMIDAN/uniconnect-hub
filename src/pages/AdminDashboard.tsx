@@ -282,8 +282,6 @@ const AdminDashboard = () => {
                     <div className="ml-4 mt-2 space-y-2">
                       {Array.from({ length: course.semesters }, (_, i) => i + 1).map((sem) => {
                         const semMaterials = getMaterialsForCourseSemester(course.id, sem);
-                    console.log(semMaterials,'semMaterials');
-                    
                         return (
                           <div key={sem} className="glass-card rounded-lg p-3">
                             <div className="flex items-center justify-between mb-2">
