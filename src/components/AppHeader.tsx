@@ -32,11 +32,6 @@ export function AppHeader() {
         </Link>
 
         <nav className="flex items-center gap-1">
-          {!user && (
-            <Button variant={isActive("/") ? "secondary" : "ghost"} size="sm" asChild className="font-body text-xs gap-1.5">
-              <Link to="/"><LogIn className="h-3.5 w-3.5" />Login</Link>
-            </Button>
-          )}
           {user && userRole === "student" && (
             <Button variant={isActive("/dashboard") ? "secondary" : "ghost"} size="sm" asChild className="font-body text-xs gap-1.5">
               <Link to="/dashboard"><BookOpen className="h-3.5 w-3.5" />Materials</Link>
