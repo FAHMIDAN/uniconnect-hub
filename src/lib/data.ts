@@ -21,12 +21,13 @@ export interface Course {
 }
 
 export const courses: Course[] = [
-  { id: '1', name: 'B.Tech Computer Science', code: 'BTCS', semesters: 8 },
-  { id: '2', name: 'B.Tech Electronics', code: 'BTEC', semesters: 8 },
-  { id: '3', name: 'BCA', code: 'BCA', semesters: 6 },
-  { id: '4', name: 'MCA', code: 'MCA', semesters: 4 },
-  { id: '5', name: 'B.Com', code: 'BCOM', semesters: 6 },
-  { id: '6', name: 'BA English', code: 'BAENG', semesters: 6 },
+  { id: 'cs', name: 'BSc Computer Science', code: 'BSCCS', semesters: 8 },
+  { id: 'phy', name: 'BSc Physics', code: 'BSCPHY', semesters: 8 },
+  { id: 'maths', name: 'BSc Mathematics', code: 'BSCMAT', semesters: 8 },
+  { id: 'eng', name: 'BA English', code: 'BAENG', semesters: 8 },
+  { id: 'eco', name: 'BA Economics', code: 'BAECO', semesters: 8 },
+  { id: 'cmh', name: 'BA Communication and Media & History', code: 'BACMH', semesters: 8 },
+  { id: 'bcom', name: 'B.Com', code: 'BCOM', semesters: 8 },
 ];
 
 export const materials: StudyMaterial[] = [
