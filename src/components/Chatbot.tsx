@@ -44,8 +44,6 @@ export function Chatbot({ userProfile }: ChatbotProps) {
 
   const sendMessage = async () => {
     if (!input.trim() || loading) return;
-    const sendMessage = async () => {
-    if (!input.trim() || loading) return;
     const userMsg: Msg = { role: "user", content: input.trim() };
     const allMessages = [...messages, userMsg];
     setMessages(allMessages);
@@ -58,7 +56,6 @@ export function Chatbot({ userProfile }: ChatbotProps) {
       });
 
       if (error) throw error;
-
       const content = data?.content || "Sorry, I couldn't process that.";
       setMessages((prev) => [...prev, { role: "assistant", content }]);
     } catch (err: any) {
@@ -71,6 +68,8 @@ export function Chatbot({ userProfile }: ChatbotProps) {
       setLoading(false);
     }
   };
+
+  return (
     <>
       <AnimatePresence>
         {!open && (
