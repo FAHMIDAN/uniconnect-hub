@@ -44,21 +44,47 @@ export function Chatbot({ userProfile }: ChatbotProps) {
 
   const sendMessage = async () => {
     if (!input.trim() || loading) return;
-    const userMsg: Msg = { role: "user", content: input.trim() };
+    const userMsg = { role: "user", content: input.trim() };
     const allMessages = [...messages, userMsg];
     setMessages(allMessages);
     setInput("");
     setLoading(true);
 
     try {
-      const { data, error } = await supabase.functions.invoke("chat", {
-        body: { messages: allMessages, profileContext: buildProfileContext() },
-      });
+      // Supabase Edge Function-u pakaram direct Gemini API vilikkunnu
+      const GEMINI_KEY = "d9c4eb041aeea9dd936bd1c5dd1249d27ec02835315f56b61c186382927fc7fe";
+      const profileContext = buildProfileContext();
+      
+      const systemPrompt = `You are a helpful study assistant for Calicut University students. Help with course-related questions, study tips, explanations of concepts, exam preparation, and academic guidance. Keep answers clear, concise, and student-friendly. Use markdown formatting for better readability. ${profileContext}`;
 
-      if (error) throw error;
-      const content = data?.content || "Sorry, I couldn't process that.";
+      const response = await fetch(
+        `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${GEMINI_KEY}`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            contents: [
+              {
+                role: "user",
+                parts: [{ text: systemPrompt }]
+              },
+              ...allMessages.map((m) => ({
+                role: m.role === "assistant" ? "model" : "user",
+                parts: [{ text: m.content }],
+              })),
+            ],
+          }),
+        }
+      );
+
+      const data = await response.json();
+      
+      if (data.error) throw new Error(data.error.message);
+
+      const content = data.candidates?.[0]?.content?.parts?.[0]?.text || "Sorry, I couldn't process that.";
       setMessages((prev) => [...prev, { role: "assistant", content }]);
-    } catch (err: any) {
+      
+    } catch (err) {
       console.error("Chat error:", err);
       setMessages((prev) => [
         ...prev,
