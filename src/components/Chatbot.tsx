@@ -42,48 +42,32 @@ export function Chatbot({ userProfile }: ChatbotProps) {
 
   const sendMessage = async () => {
     if (!input.trim() || loading) return;
-    const userMsg: Msg = { role: "user", content: input.trim() };
-    const allMessages = [...messages, userMsg];
-    setMessages(allMessages);
+    const userMsg = { role: "user", content: input.trim() };
+    setMessages(prev => [...prev, userMsg]);
     setInput("");
     setLoading(true);
 
     try {
-      // Direct Gemini API Call - Database-um Terminal-um nokkanda
       const GEMINI_KEY = "d9c4eb041aeea9dd936bd1c5dd1249d27ec02835315f56b61c186382927fc7fe";
-      const profileContext = buildProfileContext();
       
-      const systemPrompt = `You are a helpful study assistant for Calicut University students. Help with course-related questions, study tips, explanations of concepts, exam preparation, and academic guidance. Use markdown formatting. ${profileContext}`;
-
       const response = await fetch(
         `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${GEMINI_KEY}`,
         {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
-            contents: [
-              { role: "user", parts: [{ text: systemPrompt }] },
-              ...allMessages.map((m) => ({
-                role: m.role === "assistant" ? "model" : "user",
-                parts: [{ text: m.content }],
-              })),
-            ],
-          }),
+            contents: [{ parts: [{ text: userMsg.content }] }]
+          })
         }
       );
 
       const data = await response.json();
-      if (data.error) throw new Error(data.error.message);
-
-      const content = data.candidates?.[0]?.content?.parts?.[0]?.text || "Sorry, I couldn't process that.";
+      const content = data.candidates?.[0]?.content?.parts?.[0]?.text || "No response from AI.";
       setMessages((prev) => [...prev, { role: "assistant", content }]);
       
     } catch (err) {
       console.error("Chat error:", err);
-      setMessages((prev) => [
-        ...prev,
-        { role: "assistant", content: "Sorry, I'm having trouble connecting. Please try again." },
-      ]);
+      setMessages((prev) => [...prev, { role: "assistant", content: "Connection failed. Please check your internet or API key." }]);
     } finally {
       setLoading(false);
     }
