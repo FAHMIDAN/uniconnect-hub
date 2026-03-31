@@ -48,7 +48,7 @@ export function Chatbot({ userProfile }: ChatbotProps) {
     setLoading(true);
 
     try {
-      const GEMINI_KEY = "d9c4eb041aeea9dd936bd1c5dd1249d27ec02835315f56b61c186382927fc7fe";
+      const GEMINI_KEY = "AIzaSyCGP0RKPzxDfbWxgtBw7hH8LPbTC1siGsA";
       
       const response = await fetch(
         `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${GEMINI_KEY}`,
