@@ -6,22 +6,22 @@ const corsHeaders = {
 };
 
 serve(async (req) => {
+  // CORS pre-flight request handle cheyyan
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
   try {
     const { messages, profileContext } = await req.json();
-    const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
-    if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY is not configured");
+    
+    // Terminal-il error ullathu kondu namukk key nerittu ivide nalkam
+    const GEMINI_KEY = "d9c4eb041aeea9dd936bd1c5dd1249d27ec02835315f56b61c186382927fc7fe";
 
     const systemPrompt = `You are a helpful study assistant for Calicut University students. Help with course-related questions, study tips, explanations of concepts, exam preparation, and academic guidance. Keep answers clear, concise, and student-friendly. Use markdown formatting for better readability.${profileContext || ""}`;
 
     const response = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${LOVABLE_API_KEY}`,
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${GEMINI_KEY}`,
       {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           contents: [
             {
@@ -37,40 +37,27 @@ serve(async (req) => {
       }
     );
 
+    if (!response.ok) {
+        const errorText = await response.text();
+        console.error("Gemini API Error:", errorText);
+        return new Response(JSON.stringify({ error: "Gemini API error" }), {
+            status: response.status,
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+    }
+
     const data = await response.json();
     const reply = data.candidates?.[0]?.content?.parts?.[0]?.text || "Sorry, I couldn't process that.";
 
     return new Response(JSON.stringify({ content: reply }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
-    });
 
-    if (!response.ok) {
-      if (response.status === 429) {
-        return new Response(JSON.stringify({ error: "Rate limit exceeded. Please try again later." }), {
-          status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
-      }
-      if (response.status === 402) {
-        return new Response(JSON.stringify({ error: "AI credits exhausted." }), {
-          status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
-      }
-      const t = await response.text();
-      console.error("AI gateway error:", response.status, t);
-      return new Response(JSON.stringify({ error: "AI gateway error" }), {
-        status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
-    }
-
-    const data = await response.json();
-    return new Response(JSON.stringify(data), {
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
-    });
   } catch (e) {
-    console.error("chat error:", e);
+    console.error("Chat error:", e);
     return new Response(JSON.stringify({ error: e instanceof Error ? e.message : "Unknown error" }), {
-      status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" },
+      status: 500,
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   }
 });
