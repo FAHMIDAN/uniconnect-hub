@@ -1,10 +1,8 @@
 import { useState, useRef, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import { MessageCircle, Send, X, Bot, User } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
-import { supabase } from "@/integrations/supabase/client";
 import ReactMarkdown from "react-markdown";
 
 type Msg = { role: "user" | "assistant"; content: string };
@@ -44,18 +42,18 @@ export function Chatbot({ userProfile }: ChatbotProps) {
 
   const sendMessage = async () => {
     if (!input.trim() || loading) return;
-    const userMsg = { role: "user", content: input.trim() };
+    const userMsg: Msg = { role: "user", content: input.trim() };
     const allMessages = [...messages, userMsg];
     setMessages(allMessages);
     setInput("");
     setLoading(true);
 
     try {
-      // Supabase Edge Function-u pakaram direct Gemini API vilikkunnu
+      // Direct Gemini API Call - Database-um Terminal-um nokkanda
       const GEMINI_KEY = "d9c4eb041aeea9dd936bd1c5dd1249d27ec02835315f56b61c186382927fc7fe";
       const profileContext = buildProfileContext();
       
-      const systemPrompt = `You are a helpful study assistant for Calicut University students. Help with course-related questions, study tips, explanations of concepts, exam preparation, and academic guidance. Keep answers clear, concise, and student-friendly. Use markdown formatting for better readability. ${profileContext}`;
+      const systemPrompt = `You are a helpful study assistant for Calicut University students. Help with course-related questions, study tips, explanations of concepts, exam preparation, and academic guidance. Use markdown formatting. ${profileContext}`;
 
       const response = await fetch(
         `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${GEMINI_KEY}`,
@@ -64,10 +62,7 @@ export function Chatbot({ userProfile }: ChatbotProps) {
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             contents: [
-              {
-                role: "user",
-                parts: [{ text: systemPrompt }]
-              },
+              { role: "user", parts: [{ text: systemPrompt }] },
               ...allMessages.map((m) => ({
                 role: m.role === "assistant" ? "model" : "user",
                 parts: [{ text: m.content }],
@@ -78,7 +73,6 @@ export function Chatbot({ userProfile }: ChatbotProps) {
       );
 
       const data = await response.json();
-      
       if (data.error) throw new Error(data.error.message);
 
       const content = data.candidates?.[0]?.content?.parts?.[0]?.text || "Sorry, I couldn't process that.";
@@ -88,7 +82,7 @@ export function Chatbot({ userProfile }: ChatbotProps) {
       console.error("Chat error:", err);
       setMessages((prev) => [
         ...prev,
-        { role: "assistant", content: "Sorry, something went wrong. Please try again." },
+        { role: "assistant", content: "Sorry, I'm having trouble connecting. Please try again." },
       ]);
     } finally {
       setLoading(false);
@@ -100,7 +94,7 @@ export function Chatbot({ userProfile }: ChatbotProps) {
       <AnimatePresence>
         {!open && (
           <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }} exit={{ scale: 0 }} className="fixed bottom-6 right-6 z-50">
-            <Button onClick={() => setOpen(true)} className="h-14 w-14 rounded-full gradient-primary text-primary-foreground shadow-lg">
+            <Button onClick={() => setOpen(true)} className="h-14 w-14 rounded-full bg-blue-600 text-white shadow-lg hover:bg-blue-700">
               <MessageCircle className="h-6 w-6" />
             </Button>
           </motion.div>
@@ -113,27 +107,27 @@ export function Chatbot({ userProfile }: ChatbotProps) {
             initial={{ opacity: 0, y: 20, scale: 0.95 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: 20, scale: 0.95 }}
-            className="fixed bottom-6 right-6 z-50 w-[360px] h-[500px] glass-card rounded-2xl flex flex-col overflow-hidden shadow-xl border border-border"
+            className="fixed bottom-6 right-6 z-50 w-[360px] h-[500px] bg-white rounded-2xl flex flex-col overflow-hidden shadow-2xl border border-gray-200"
           >
-            <div className="gradient-primary px-4 py-3 flex items-center justify-between">
-              <div className="flex items-center gap-2 text-primary-foreground">
+            <div className="bg-blue-600 px-4 py-3 flex items-center justify-between text-white">
+              <div className="flex items-center gap-2">
                 <Bot className="h-5 w-5" />
-                <span className="font-heading font-semibold text-sm">Study Assistant</span>
+                <span className="font-semibold text-sm">Study Assistant</span>
               </div>
-              <Button variant="ghost" size="icon" onClick={() => setOpen(false)} className="h-7 w-7 text-primary-foreground hover:bg-primary-foreground/20">
+              <Button variant="ghost" size="icon" onClick={() => setOpen(false)} className="h-7 w-7 text-white hover:bg-white/20">
                 <X className="h-4 w-4" />
               </Button>
             </div>
 
-            <div ref={scrollRef} className="flex-1 overflow-y-auto p-4 space-y-3">
+            <div ref={scrollRef} className="flex-1 overflow-y-auto p-4 space-y-3 bg-gray-50">
               {messages.map((msg, i) => (
                 <div key={i} className={`flex gap-2 ${msg.role === "user" ? "justify-end" : "justify-start"}`}>
                   {msg.role === "assistant" && (
-                    <div className="bg-primary/10 text-primary rounded-full p-1.5 h-7 w-7 shrink-0 flex items-center justify-center">
+                    <div className="bg-blue-100 text-blue-600 rounded-full p-1.5 h-7 w-7 shrink-0 flex items-center justify-center">
                       <Bot className="h-3.5 w-3.5" />
                     </div>
                   )}
-                  <div className={`max-w-[75%] rounded-xl px-3 py-2 text-sm font-body ${msg.role === "user" ? "gradient-primary text-primary-foreground" : "bg-secondary text-secondary-foreground"}`}>
+                  <div className={`max-w-[75%] rounded-xl px-3 py-2 text-sm ${msg.role === "user" ? "bg-blue-600 text-white" : "bg-white text-gray-800 border border-gray-200"}`}>
                     {msg.role === "assistant" ? (
                       <div className="prose prose-sm max-w-none [&>p]:m-0">
                         <ReactMarkdown>{msg.content}</ReactMarkdown>
@@ -142,33 +136,15 @@ export function Chatbot({ userProfile }: ChatbotProps) {
                       msg.content
                     )}
                   </div>
-                  {msg.role === "user" && (
-                    <div className="bg-accent/10 text-accent rounded-full p-1.5 h-7 w-7 shrink-0 flex items-center justify-center">
-                      <User className="h-3.5 w-3.5" />
-                    </div>
-                  )}
                 </div>
               ))}
-              {loading && (
-                <div className="flex gap-2 items-center">
-                  <div className="bg-primary/10 text-primary rounded-full p-1.5 h-7 w-7 shrink-0 flex items-center justify-center">
-                    <Bot className="h-3.5 w-3.5" />
-                  </div>
-                  <div className="bg-secondary rounded-xl px-3 py-2">
-                    <div className="flex gap-1">
-                      <span className="w-2 h-2 bg-muted-foreground rounded-full animate-bounce" style={{ animationDelay: "0ms" }} />
-                      <span className="w-2 h-2 bg-muted-foreground rounded-full animate-bounce" style={{ animationDelay: "150ms" }} />
-                      <span className="w-2 h-2 bg-muted-foreground rounded-full animate-bounce" style={{ animationDelay: "300ms" }} />
-                    </div>
-                  </div>
-                </div>
-              )}
+              {loading && <div className="text-xs text-gray-400 italic ml-9">Assistant is thinking...</div>}
             </div>
 
-            <div className="p-3 border-t border-border">
+            <div className="p-3 border-t border-gray-100 bg-white">
               <form onSubmit={(e) => { e.preventDefault(); sendMessage(); }} className="flex gap-2">
-                <Input value={input} onChange={(e) => setInput(e.target.value)} placeholder="Ask a question..." className="flex-1 font-body text-sm" disabled={loading} />
-                <Button type="submit" size="icon" disabled={loading || !input.trim()} className="gradient-primary text-primary-foreground shrink-0">
+                <Input value={input} onChange={(e) => setInput(e.target.value)} placeholder="Ask a question..." className="flex-1 text-sm" disabled={loading} />
+                <Button type="submit" size="icon" disabled={loading || !input.trim()} className="bg-blue-600 text-white hover:bg-blue-700">
                   <Send className="h-4 w-4" />
                 </Button>
               </form>
