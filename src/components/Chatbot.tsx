@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { MessageCircle, Send, X, Bot, User } from "lucide-react";
+import { MessageCircle, Send, X, Bot } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import ReactMarkdown from "react-markdown";
 
@@ -31,15 +31,6 @@ export function Chatbot({ userProfile }: ChatbotProps) {
     }
   }, [messages]);
 
-  const buildProfileContext = () => {
-    if (!userProfile) return "";
-    const parts: string[] = [];
-    if (userProfile.full_name) parts.push(`Student name: ${userProfile.full_name}`);
-    if (userProfile.courses?.name) parts.push(`Course: ${userProfile.courses.name}`);
-    if (userProfile.current_semester) parts.push(`Current semester: ${userProfile.current_semester}`);
-    return parts.length > 0 ? `\n\nCurrent student context:\n${parts.join("\n")}` : "";
-  };
-
   const sendMessage = async () => {
     if (!input.trim() || loading) return;
     const userMsg = { role: "user", content: input.trim() };
@@ -48,8 +39,8 @@ export function Chatbot({ userProfile }: ChatbotProps) {
     setLoading(true);
 
     try {
-      const GEMINI_KEY = "AIzaSyCGP0RKPzxDfbWxgtBw7hH8LPbTC1siGsA";
-      const GEMINI_KEY = import.meta.env.VITE_GEMINI_API_KEY;
+      // .env-il ninnu key edukkan sramikkunnu, illengil direct key upayogikkum
+      const GEMINI_KEY = import.meta.env.VITE_GEMINI_API_KEY || "AIzaSyCGP0RKPzxDfbWxgtBw7hH8LPbTC1siGsA";
       
       const response = await fetch(
         `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${GEMINI_KEY}`,
@@ -63,12 +54,17 @@ export function Chatbot({ userProfile }: ChatbotProps) {
       );
 
       const data = await response.json();
+      
+      if (data.error) {
+        throw new Error(data.error.message || "API Error");
+      }
+
       const content = data.candidates?.[0]?.content?.parts?.[0]?.text || "No response from AI.";
       setMessages((prev) => [...prev, { role: "assistant", content }]);
       
     } catch (err) {
       console.error("Chat error:", err);
-      setMessages((prev) => [...prev, { role: "assistant", content: "Connection failed. Please check your internet or API key." }]);
+      setMessages((prev) => [...prev, { role: "assistant", content: "Sorry, I'm having trouble connecting. Please try again." }]);
     } finally {
       setLoading(false);
     }
@@ -112,7 +108,7 @@ export function Chatbot({ userProfile }: ChatbotProps) {
                       <Bot className="h-3.5 w-3.5" />
                     </div>
                   )}
-                  <div className={`max-w-[75%] rounded-xl px-3 py-2 text-sm ${msg.role === "user" ? "bg-blue-600 text-white" : "bg-white text-gray-800 border border-gray-200"}`}>
+                  <div className={`max-w-[75%] rounded-xl px-3 py-2 text-sm ${msg.role === "user" ? "bg-blue-600 text-white" : "bg-white text-gray-800 border border-gray-200 shadow-sm"}`}>
                     {msg.role === "assistant" ? (
                       <div className="prose prose-sm max-w-none [&>p]:m-0">
                         <ReactMarkdown>{msg.content}</ReactMarkdown>
