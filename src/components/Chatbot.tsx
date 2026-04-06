@@ -32,7 +32,7 @@ export function Chatbot() {
 
     try {
       // Direct API Key use cheyyunnu (Just for testing)
-      const API_KEY = "AIzaSyCGP0RKPzxDfbWxgtBw7hH8LPbTC1siGsA"; 
+      const API_KEY = "AIzaSyDm573TZF7Pm3Y5ABGjYuzCEYlKLyh0zAY"; 
       const API_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${API_KEY}`;
 
       const response = await fetch(API_URL, {
