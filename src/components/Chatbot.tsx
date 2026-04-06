@@ -31,7 +31,7 @@ export function Chatbot() {
     setLoading(true);
 
     try {
-      // Direct API Key for Monday's Presentation
+      // Direct API Key use cheyyunnu (Just for testing)
       const API_KEY = "AIzaSyCGP0RKPzxDfbWxgtBw7hH8LPbTC1siGsA"; 
       const API_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${API_KEY}`;
 
@@ -43,22 +43,24 @@ export function Chatbot() {
         })
       });
 
-      const data = await response.json();
-
-      if (data.error) {
-        throw new Error(data.error.message);
+      if (!response.ok) {
+        const errorData = await response.json();
+        console.error("Gemini API Error Detail:", errorData);
+        throw new Error(errorData.error?.message || "Failed to fetch from Gemini");
       }
 
-      const aiResponse = data.candidates?.[0]?.content?.parts?.[0]?.text || "I couldn't understand that. Could you rephrase?";
+      const data = await response.json();
+      const aiResponse = data.candidates?.[0]?.content?.parts?.[0]?.text || "No response received.";
       setMessages((prev) => [...prev, { role: "assistant", content: aiResponse }]);
 
-    } catch (err) {
-      console.error("Chat Error:", err);
-      setMessages((prev) => [...prev, { role: "assistant", content: "Sorry, I'm having connection issues. Please try again." }]);
+    } catch (err: any) {
+      console.error("Chatbot Connection Error:", err);
+      // Connection issue-kku pakaram enthanu actual error ennukoadi display cheyyaam
+      setMessages((prev) => [...prev, { role: "assistant", content: `Error: ${err.message}` }]);
     } finally {
       setLoading(false);
     }
-  };
+};
 
   return (
     <>
