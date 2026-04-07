@@ -52,7 +52,6 @@ export function Chatbot() {
 
     } catch (err: any) {
       console.error("Chatbot Connection Error:", err);
-      // Connection issue-kku pakaram enthanu actual error ennukoadi display cheyyaam
       setMessages((prev) => [...prev, { role: "assistant", content: `Error: ${err.message}` }]);
     } finally {
       setLoading(false);
