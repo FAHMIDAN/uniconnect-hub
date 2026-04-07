@@ -33,7 +33,6 @@ export function Chatbot() {
     try {
       const API_KEY = "AIzaSyDm573TZF7Pm3Y5ABGjYuzCEYlKLyh0zAY"; 
       const API_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${API_KEY}`;
-      const response = await fetch(API_URL, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
