@@ -32,27 +32,31 @@ export function Chatbot() {
     setLoading(true);
 
     try {
-      // API Key & Model Setup
-      const genAI = new GoogleGenerativeAI("AIzaSyDm573TZF7Pm3Y5ABGjYuzCEYlKLyh0zAY");
-      const model = genAI.getGenerativeModel({ model: "gemini-pro" });
+      // Step 1: Vercel-ile API key vilikkunnu, illengil direct key edukkum
+      const apiKey = import.meta.env.VITE_GEMINI_API_KEY || "AIzaSyDm573TZF7Pm3Y5ABGjYuzCEYlKLyh0zAY";
+      const genAI = new GoogleGenerativeAI(apiKey);
+      
+      // Step 2: Kooduthal stable aaya 'gemini-1.5-flash' model thanne upayogikkaam
+      const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
 
       const result = await model.generateContent(userMsg.content);
       const response = await result.response;
       const text = response.text();
 
+      // Step 3: Real AI response message-il set cheyyunnu
       setMessages((prev) => [...prev, { role: "assistant", content: text }]);
 
     } catch (err: any) {
       console.error("Chat Error:", err);
       
-      // Smart Fallback Logic: API work aayillel polum reply tharum
-      let mockReply = "I'm here to help! I can provide details about the Calicut University MSc Computer Science syllabus and study materials.";
-      
+      // Error vannal mathram ee thazheulla 'Mock Reply' work aakum
       const lowerInput = userMsg.content.toLowerCase();
+      let mockReply = "I'm having trouble connecting to the AI. But as your Study Assistant, I can tell you that the FYUGP syllabus materials are in the Materials section.";
+
       if (lowerInput.includes("syllabus")) {
-        mockReply = "The FYUGP syllabus for Computer Science is integrated into this portal. You can find specific semester materials in the 'Materials' section.";
+        mockReply = "The Calicut University FYUGP syllabus for MSc Computer Science is integrated here. Please check the 'Materials' tab for semester-wise PDFs.";
       } else if (lowerInput.includes("hi") || lowerInput.includes("hello")) {
-        mockReply = "Hello! I am your AI assistant for the CU Study Portal. How can I assist with your project or studies today?";
+        mockReply = "Hello! How can I help you with your CU Study Portal today?";
       }
 
       setMessages((prev) => [...prev, { role: "assistant", content: mockReply }]);
