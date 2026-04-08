@@ -32,39 +32,39 @@ export function Chatbot() {
     setLoading(true);
 
     try {
-      // Direct API Key (Vercel-il variable set cheyyan budhimuttundengil ithaanu vazhi)
-      const apiKey = "AIzaSyDm573TZF7Pm3Y5ABGjYuzCEYlKLyh0zAY"; 
-      const genAI = new GoogleGenerativeAI(apiKey);
+      // Step 1: Proxy URL upayogichu Google API-ye vilikkunnu
+      const API_KEY = "AIzaSyDm573TZF7Pm3Y5ABGjYuzCEYlKLyh0zAY";
+      const PROXY_URL = "https://cors-anywhere.herokuapp.com/"; // Proxy server
+      const TARGET_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${API_KEY}`;
+
+      const response = await fetch(TARGET_URL, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          contents: [{ parts: [{ text: userMsg.content }] }]
+        })
+      });
+
+      const data = await response.json();
       
-      // Model 'gemini-1.5-flash' upayogikkunnu
-      const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
-
-      const result = await model.generateContent(userMsg.content);
-      const response = await result.response;
-      const text = response.text();
-
-      setMessages((prev) => [...prev, { role: "assistant", content: text }]);
-
-    } catch (err: any) {
-       // Error log cheyyaan (Console-il nokkaam)
-       console.error("API Error Detail:", err);
-      
-      // Error vannal mathram ee thazheulla 'Mock Reply' work aakum
-      const lowerInput = userMsg.content.toLowerCase();
-      let mockReply = "I'm having trouble connecting to the AI. But as your Study Assistant, I can tell you that the FYUGP syllabus materials are in the Materials section.";
-
-      if (lowerInput.includes("syllabus")) {
-        mockReply = "The Calicut University FYUGP syllabus for MSc Computer Science is integrated here. Please check the 'Materials' tab for semester-wise PDFs.";
-      } else if (lowerInput.includes("hi") || lowerInput.includes("hello")) {
-        mockReply = "Hello! How can I help you with your CU Study Portal today?";
+      if (data.candidates && data.candidates[0].content.parts[0].text) {
+        const aiText = data.candidates[0].content.parts[0].text;
+        setMessages((prev) => [...prev, { role: "assistant", content: aiText }]);
+      } else {
+        throw new Error("Invalid API Response");
       }
 
-      setMessages((prev) => [...prev, { role: "assistant", content: mockReply }]);
+    } catch (err: any) {
+      console.error("Chat Error:", err);
+      // Fallback: If Proxy doesn't respond, show a smart hint
+      setMessages((prev) => [...prev, { 
+        role: "assistant", 
+        content: "Network congestion. Please refresh or check your internet connection." 
+      }]);
     } finally {
       setLoading(false);
     }
   };
-
   return (
     <>
       <AnimatePresence>
