@@ -32,22 +32,22 @@ export function Chatbot() {
     setLoading(true);
 
     try {
-      // Step 1: Vercel-ile API key vilikkunnu, illengil direct key edukkum
-      const apiKey = import.meta.env.VITE_GEMINI_API_KEY || "AIzaSyDm573TZF7Pm3Y5ABGjYuzCEYlKLyh0zAY";
+      // Direct API Key (Vercel-il variable set cheyyan budhimuttundengil ithaanu vazhi)
+      const apiKey = "AIzaSyDm573TZF7Pm3Y5ABGjYuzCEYlKLyh0zAY"; 
       const genAI = new GoogleGenerativeAI(apiKey);
       
-      // Step 2: Kooduthal stable aaya 'gemini-1.5-flash' model thanne upayogikkaam
+      // Model 'gemini-1.5-flash' upayogikkunnu
       const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
 
       const result = await model.generateContent(userMsg.content);
       const response = await result.response;
       const text = response.text();
 
-      // Step 3: Real AI response message-il set cheyyunnu
       setMessages((prev) => [...prev, { role: "assistant", content: text }]);
 
     } catch (err: any) {
-      console.error("Chat Error:", err);
+       // Error log cheyyaan (Console-il nokkaam)
+       console.error("API Error Detail:", err);
       
       // Error vannal mathram ee thazheulla 'Mock Reply' work aakum
       const lowerInput = userMsg.content.toLowerCase();
