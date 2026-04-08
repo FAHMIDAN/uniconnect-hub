@@ -34,7 +34,7 @@ export function Chatbot() {
     try {
       // API Key & Model Setup
       const genAI = new GoogleGenerativeAI("AIzaSyDm573TZF7Pm3Y5ABGjYuzCEYlKLyh0zAY");
-      const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+      const model = genAI.getGenerativeModel({ model: "gemini-pro" });
 
       const result = await model.generateContent(userMsg.content);
       const response = await result.response;
