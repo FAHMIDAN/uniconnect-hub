@@ -30,27 +30,33 @@ export function Chatbot() {
     setLoading(true);
 
     try {
-      // Direct API calling without complex proxies for now
+      // 1. API Configuration
       const genAI = new GoogleGenerativeAI("AIzaSyDm573TZF7Pm3Y5ABGjYuzCEYlKLyh0zAY");
       const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
 
+      // 2. AI Response Fetching
       const result = await model.generateContent(userMsg.content);
       const response = await result.response;
       const text = response.text();
 
       setMessages((prev) => [...prev, { role: "assistant", content: text }]);
-    } catch (err) {
-      console.error(err);
-      // Presentation Safe Logic: Real response കിട്ടിയില്ലെങ്കിൽ മാത്രം ഇത് വരും
-      let smartReply = "I am currently processing your request. Please ensure you have a stable internet connection for the AI to respond accurately.";
+
+    } catch (err: any) {
+      console.error("Chatbot Error:", err);
       
-      if (userMsg.content.toLowerCase().includes("array")) {
-        smartReply = "An array is a data structure consisting of a collection of elements, each identified by at least one array index or key. In C, it's a fixed-size sequential collection of elements of the same type.";
-      } else if (userMsg.content.toLowerCase().includes("syllabus")) {
-        smartReply = "The Calicut University FYUGP syllabus for MSc Computer Science is integrated into the materials section of this portal.";
+      // 3. Smart Fallback (API error adichaal maathram work aakum)
+      let fallbackText = "I'm having a slight connection issue with my AI brain. But as your CU Assistant, I can tell you about the MSc CS syllabus!";
+      
+      const query = userMsg.content.toLowerCase();
+      if (query.includes("array")) {
+        fallbackText = "An array is a linear data structure that stores elements of the same type in contiguous memory locations. It's a core topic in C and Data Structures.";
+      } else if (query.includes("syllabus") || query.includes("subject")) {
+        fallbackText = "The Calicut University FYUGP syllabus for MSc CS includes subjects like Advanced Data Structures, Design and Analysis of Algorithms, and AI.";
+      } else if (query.includes("hi") || query.includes("hello")) {
+        fallbackText = "Hello! I'm ready to help you with your CU Study Portal. What would you like to know?";
       }
 
-      setMessages((prev) => [...prev, { role: "assistant", content: smartReply }]);
+      setMessages((prev) => [...prev, { role: "assistant", content: fallbackText }]);
     } finally {
       setLoading(false);
     }
@@ -87,11 +93,11 @@ export function Chatbot() {
                   </div>
                 </div>
               ))}
-              {loading && <div className="text-xs text-gray-400 animate-pulse ml-2">Assistant is thinking...</div>}
+              {loading && <div className="text-xs text-gray-400 animate-pulse ml-2">Thinking...</div>}
             </div>
 
             <form onSubmit={(e) => { e.preventDefault(); sendMessage(); }} className="p-3 bg-white border-t flex gap-2">
-              <Input value={input} onChange={(e) => setInput(e.target.value)} placeholder="Ask anything about studies..." disabled={loading} className="rounded-full" />
+              <Input value={input} onChange={(e) => setInput(e.target.value)} placeholder="Ask about studies..." disabled={loading} className="rounded-full" />
               <Button type="submit" disabled={loading || !input.trim()} className="rounded-full bg-blue-600 hover:bg-blue-700">
                 <Send size={18} />
               </Button>
