@@ -22,42 +22,51 @@ export function Chatbot() {
   }, [messages, loading]);
 
   const sendMessage = async () => {
-    if (!input.trim() || loading) return;
+  if (!input.trim() || loading) return;
 
-    const userMsg: Msg = { role: "user", content: input.trim() };
-    setMessages((prev) => [...prev, userMsg]);
-    const currentInput = input.trim(); // ഇൻപുട്ട് സേവ് ചെയ്യുന്നു
-    setInput("");
-    setLoading(true);
+  const userMsg: Msg = { role: "user", content: input.trim() };
+  setMessages((prev) => [...prev, userMsg]);
+  const currentInput = input.trim();
+  setInput("");
+  setLoading(true);
 
-    try {
-      const apiKey = import.meta.env.VITE_GEMINI_API_KEY;
-      if (!apiKey) {
-        throw new Error("API Key missing!");
-      }
+  try {
+    const apiKey = import.meta.env.VITE_GEMINI_API_KEY;
+    
+    // ലൈബ്രറി ഒഴിവാക്കി നേരിട്ട് API URL ഉപയോഗിക്കുന്നു (v1beta-യ്ക്ക് പകരം v1)
+    const url = `https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash:generateContent?key=${apiKey}`;
 
-      const genAI = new GoogleGenerativeAI(apiKey);
-      
-      // ✅ ഇവിടെ മാത്രം നോക്കുക: model എന്ന പേര് ഒരിക്കൽ മാത്രം ഉപയോഗിക്കുക
-      const geminiModel = genAI.getGenerativeModel({ model: "gemini-pro" });
+    const response = await fetch(url, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        contents: [{
+          parts: [{ text: currentInput }]
+        }]
+      })
+    });
 
-      const result = await geminiModel.generateContent(currentInput);
-      const response = await result.response;
-      const text = response.text();
+    const data = await response.json();
 
-      if (text) {
-        setMessages((prev) => [...prev, { role: "assistant", content: text }]);
-      }
-    } catch (err: any) {
-      console.error("Gemini Error:", err);
-      setMessages((prev) => [
-        ...prev, 
-        { role: "assistant", content: "Sorry, connection error. Please try again." }
-      ]);
-    } finally {
-      setLoading(false);
+    if (data.candidates && data.candidates[0].content.parts[0].text) {
+      const text = data.candidates[0].content.parts[0].text;
+      setMessages((prev) => [...prev, { role: "assistant", content: text }]);
+    } else {
+      throw new Error("Invalid response from API");
     }
-  };
+
+  } catch (err: any) {
+    console.error("Gemini Direct Error:", err);
+    setMessages((prev) => [
+      ...prev, 
+      { role: "assistant", content: "Sorry, I'm having trouble connecting. Please check your internet or API key." }
+    ]);
+  } finally {
+    setLoading(false);
+  }
+};
 
   return (
     <>
