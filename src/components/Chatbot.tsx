@@ -36,7 +36,7 @@ export function Chatbot() {
         throw new Error("API Key missing! Please check your .env file.");
       }
 
-      const genAI = new GoogleGenerativeAI(apiKey);
+      const model = genAI.getGenerativeModel({ model: "gemini-pro" });
       
       // ✅ 404 Error മാറാൻ 'gemini-1.5-flash' എന്ന് തന്നെ നൽകുക. 
       // '-latest' ചില പഴയ വേർഷനുകളിൽ സപ്പോർട്ട് ചെയ്യില്ല.
