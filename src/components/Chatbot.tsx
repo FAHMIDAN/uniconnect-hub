@@ -22,45 +22,37 @@ export function Chatbot() {
   }, [messages, loading]);
 
   const sendMessage = async () => {
-    if (!input.trim() || loading) return;
+  if (!input.trim() || loading) return;
 
-    const userMsg: Msg = { role: "user", content: input.trim() };
-    setMessages((prev) => [...prev, userMsg]);
-    setInput("");
-    setLoading(true);
+  const userMsg: Msg = { role: "user", content: input.trim() };
+  setMessages((prev) => [...prev, userMsg]);
+  setInput("");
+  setLoading(true);
 
-    try {
-      // 1. API Configuration
-      const genAI = new GoogleGenerativeAI("AIzaSyDm573TZF7Pm3Y5ABGjYuzCEYlKLyh0zAY");
-      const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+  try {
+    const apiKey = import.meta.env.VITE_GEMINI_API_KEY || "AIzaSyDm573TZF7Pm3Y5ABGjYuzCEYlKLyh0zAY";
+    const genAI = new GoogleGenerativeAI(apiKey);
+    const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
 
-      // 2. AI Response Fetching
-      const result = await model.generateContent(userMsg.content);
-      const response = await result.response;
-      const text = response.text();
+    const result = await model.generateContent(userMsg.content);
+    const response = await result.response;
+    const text = response.text();
 
+    if (text) {
       setMessages((prev) => [...prev, { role: "assistant", content: text }]);
-
-    } catch (err: any) {
-      console.error("Chatbot Error:", err);
-      
-      // 3. Smart Fallback (API error adichaal maathram work aakum)
-      let fallbackText = "I'm having a slight connection issue with my AI brain. But as your CU Assistant, I can tell you about the MSc CS syllabus!";
-      
-      const query = userMsg.content.toLowerCase();
-      if (query.includes("array")) {
-        fallbackText = "An array is a linear data structure that stores elements of the same type in contiguous memory locations. It's a core topic in C and Data Structures.";
-      } else if (query.includes("syllabus") || query.includes("subject")) {
-        fallbackText = "The Calicut University FYUGP syllabus for MSc CS includes subjects like Advanced Data Structures, Design and Analysis of Algorithms, and AI.";
-      } else if (query.includes("hi") || query.includes("hello")) {
-        fallbackText = "Hello! I'm ready to help you with your CU Study Portal. What would you like to know?";
-      }
-
-      setMessages((prev) => [...prev, { role: "assistant", content: fallbackText }]);
-    } finally {
-      setLoading(false);
     }
-  };
+
+  } catch (err: any) {
+    console.error("Gemini Error:", err);
+    
+    setMessages((prev) => [
+      ...prev, 
+      { role: "assistant", content: "Sorry, I'm having trouble connecting to Gemini. Please check your internet or API key." }
+    ]);
+  } finally {
+    setLoading(false);
+  }
+};
 
   return (
     <>
