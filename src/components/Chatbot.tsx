@@ -36,7 +36,7 @@ export function Chatbot() {
       console.error("API Key missing! Check your .env file.");
     }
     const genAI = new GoogleGenerativeAI(apiKey);
-    const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+    const model = genAI.getGenerativeModel({ model: "gemini-pro" });
     const result = await model.generateContent(userMsg.content);
     const response = await result.response;
     const text = response.text();
