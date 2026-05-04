@@ -31,11 +31,10 @@ export function Chatbot() {
   setLoading(true);
 
   try {
-    const apiKey = import.meta.env.VITE_GEMINI_API_KEY;
+    const apiKey =AIzaSyCsnUP07HuUckHCstZCfrhIutcBu0c0P8c;
     
     // ലൈബ്രറി ഒഴിവാക്കി നേരിട്ട് API URL ഉപയോഗിക്കുന്നു (v1beta-യ്ക്ക് പകരം v1)
-    const url = `https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash:generateContent?key=${apiKey}`;
-
+    const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`;
     const response = await fetch(url, {
       method: "POST",
       headers: {
