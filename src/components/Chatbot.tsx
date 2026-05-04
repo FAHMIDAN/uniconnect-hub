@@ -39,7 +39,7 @@ export function Chatbot() {
       const genAI = new GoogleGenerativeAI(apiKey);
       
       // ✅ ഇവിടെ മാത്രം നോക്കുക: model എന്ന പേര് ഒരിക്കൽ മാത്രം ഉപയോഗിക്കുക
-      const geminiModel = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+      const geminiModel = genAI.getGenerativeModel({ model: "gemini-pro" });
 
       const result = await geminiModel.generateContent(currentInput);
       const response = await result.response;
