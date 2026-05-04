@@ -22,40 +22,57 @@ export function Chatbot() {
   }, [messages, loading]);
 
   const sendMessage = async () => {
-  if (!input.trim() || loading) return;
+    if (!input.trim() || loading) return;
 
-  const userMsg: Msg = { role: "user", content: input.trim() };
-  setMessages((prev) => [...prev, userMsg]);
-  setInput("");
-  setLoading(true);
+    const userMsg: Msg = { role: "user", content: input.trim() };
+    setMessages((prev) => [...prev, userMsg]);
+    const currentInput = input.trim();
+    setInput("");
+    setLoading(true);
 
-  try {
-    const apiKey = import.meta.env.VITE_GEMINI_API_KEY;
-    if (!apiKey) 
-    {
-      console.error("API Key missing! Check your .env file.");
+    try {
+      const apiKey = import.meta.env.VITE_GEMINI_API_KEY;
+      if (!apiKey) {
+        throw new Error("API Key missing! Please check your .env file.");
+      }
+
+      const genAI = new GoogleGenerativeAI(apiKey);
+      
+      // ✅ 404 Error മാറാൻ 'gemini-1.5-flash' എന്ന് തന്നെ നൽകുക. 
+      // '-latest' ചില പഴയ വേർഷനുകളിൽ സപ്പോർട്ട് ചെയ്യില്ല.
+      const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+
+      // ✅ കറക്റ്റ് ആയി റിക്വസ്റ്റ് അയക്കുന്ന രീതി
+      const result = await model.generateContent(currentInput);
+      const response = await result.response;
+      const text = response.text();
+
+      if (text) {
+        setMessages((prev) => [...prev, { role: "assistant", content: text }]);
+      } else {
+        throw new Error("Empty response from AI");
+      }
+
+    } catch (err: any) {
+      console.error("Gemini Error Details:", err);
+      
+      let errorMessage = "Sorry, I'm having trouble connecting. Please try again later.";
+      
+      // എറർ മെസ്സേജ് കൂടുതൽ വ്യക്തമാക്കാൻ
+      if (err.message?.includes("404")) {
+        errorMessage = "AI model not found. Please check your library version or model name.";
+      } else if (err.message?.includes("API Key")) {
+        errorMessage = "Invalid API Key. Please update it in your .env file.";
+      }
+
+      setMessages((prev) => [
+        ...prev, 
+        { role: "assistant", content: errorMessage }
+      ]);
+    } finally {
+      setLoading(false);
     }
-    const genAI = new GoogleGenerativeAI(apiKey);
-   const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash-latest" });
-    const result = await model.generateContent(userMsg.content);
-    const response = await result.response;
-    const text = response.text();
-
-    if (text) {
-      setMessages((prev) => [...prev, { role: "assistant", content: text }]);
-    }
-
-  } catch (err: any) {
-    console.error("Gemini Error:", err);
-    
-    setMessages((prev) => [
-      ...prev, 
-      { role: "assistant", content: "Sorry, I'm having trouble connecting to Gemini. Please check your internet or API key." }
-    ]);
-  } finally {
-    setLoading(false);
-  }
-};
+  };
 
   return (
     <>
@@ -88,11 +105,23 @@ export function Chatbot() {
                   </div>
                 </div>
               ))}
-              {loading && <div className="text-xs text-gray-400 animate-pulse ml-2">Thinking...</div>}
+              {loading && (
+                <div className="flex items-center gap-2 ml-2">
+                  <div className="w-2 h-2 bg-blue-400 rounded-full animate-bounce" />
+                  <div className="w-2 h-2 bg-blue-400 rounded-full animate-bounce [animation-delay:-.3s]" />
+                  <div className="w-2 h-2 bg-blue-400 rounded-full animate-bounce [animation-delay:-.5s]" />
+                </div>
+              )}
             </div>
 
             <form onSubmit={(e) => { e.preventDefault(); sendMessage(); }} className="p-3 bg-white border-t flex gap-2">
-              <Input value={input} onChange={(e) => setInput(e.target.value)} placeholder="Ask about studies..." disabled={loading} className="rounded-full" />
+              <Input 
+                value={input} 
+                onChange={(e) => setInput(e.target.value)} 
+                placeholder="Ask about studies..." 
+                disabled={loading} 
+                className="rounded-full" 
+              />
               <Button type="submit" disabled={loading || !input.trim()} className="rounded-full bg-blue-600 hover:bg-blue-700">
                 <Send size={18} />
               </Button>
