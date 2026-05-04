@@ -26,48 +26,33 @@ export function Chatbot() {
 
     const userMsg: Msg = { role: "user", content: input.trim() };
     setMessages((prev) => [...prev, userMsg]);
-    const currentInput = input.trim();
+    const currentInput = input.trim(); // ഇൻപുട്ട് സേവ് ചെയ്യുന്നു
     setInput("");
     setLoading(true);
 
     try {
       const apiKey = import.meta.env.VITE_GEMINI_API_KEY;
       if (!apiKey) {
-        throw new Error("API Key missing! Please check your .env file.");
+        throw new Error("API Key missing!");
       }
 
-      const model = genAI.getGenerativeModel({ model: "gemini-pro" });
+      const genAI = new GoogleGenerativeAI(apiKey);
       
-      // ✅ 404 Error മാറാൻ 'gemini-1.5-flash' എന്ന് തന്നെ നൽകുക. 
-      // '-latest' ചില പഴയ വേർഷനുകളിൽ സപ്പോർട്ട് ചെയ്യില്ല.
-      const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+      // ✅ ഇവിടെ മാത്രം നോക്കുക: model എന്ന പേര് ഒരിക്കൽ മാത്രം ഉപയോഗിക്കുക
+      const geminiModel = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
 
-      // ✅ കറക്റ്റ് ആയി റിക്വസ്റ്റ് അയക്കുന്ന രീതി
-      const result = await model.generateContent(currentInput);
+      const result = await geminiModel.generateContent(currentInput);
       const response = await result.response;
       const text = response.text();
 
       if (text) {
         setMessages((prev) => [...prev, { role: "assistant", content: text }]);
-      } else {
-        throw new Error("Empty response from AI");
       }
-
     } catch (err: any) {
-      console.error("Gemini Error Details:", err);
-      
-      let errorMessage = "Sorry, I'm having trouble connecting. Please try again later.";
-      
-      // എറർ മെസ്സേജ് കൂടുതൽ വ്യക്തമാക്കാൻ
-      if (err.message?.includes("404")) {
-        errorMessage = "AI model not found. Please check your library version or model name.";
-      } else if (err.message?.includes("API Key")) {
-        errorMessage = "Invalid API Key. Please update it in your .env file.";
-      }
-
+      console.error("Gemini Error:", err);
       setMessages((prev) => [
         ...prev, 
-        { role: "assistant", content: errorMessage }
+        { role: "assistant", content: "Sorry, connection error. Please try again." }
       ]);
     } finally {
       setLoading(false);
