@@ -32,8 +32,6 @@ export function Chatbot() {
 
   try {
     const apiKey ="AIzaSyCsnUP07HuUckHCstZCfrhIutcBu0c0P8c";
-    
-    // ലൈബ്രറി ഒഴിവാക്കി നേരിട്ട് API URL ഉപയോഗിക്കുന്നു (v1beta-യ്ക്ക് പകരം v1)
     const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`;
     const response = await fetch(url, {
       method: "POST",
