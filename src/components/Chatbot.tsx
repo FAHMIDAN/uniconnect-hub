@@ -76,15 +76,14 @@ export function Chatbot({ userProfile }: ChatbotProps) {
       const apiKey = import.meta.env.VITE_GEMINI_API_KEY;
       if (!apiKey) throw new Error("Missing VITE_GEMINI_API_KEY");
 
-      // കറക്റ്റ് API URL
+      // കറക്റ്റ് ആക്കിയ URL (v1 കൂടാതെ models/ എന്ന് കൂടി ചേർത്തു)
       const url = `https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash:generateContent?key=${apiKey}`;
-      // കൺവെർസേഷൻ ഹിസ്റ്ററി ശരിയായ ഫോർമാറ്റിലേക്ക് മാറ്റുന്നു
+
       const conversation = nextMessages.map((m) => ({
         role: m.role === "assistant" ? "model" : "user",
         parts: [{ text: m.content }],
       }));
 
-      // സിസ്റ്റം ഇൻസ്ട്രക്ഷൻ ആദ്യത്തെ മെസ്സേജിന്റെ കൂടെ സുരക്ഷിതമായി ചേർക്കുന്നു
       const systemPrompt = buildSystemPrompt();
       const requestContents = [
         {
@@ -98,7 +97,7 @@ export function Chatbot({ userProfile }: ChatbotProps) {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          contents: requestContents, // ഗൂഗിൾ സ്വീകരിക്കുന്ന കറക്റ്റ് സ്ട്രക്ചർ
+          contents: requestContents,
         }),
       });
 
@@ -114,7 +113,7 @@ export function Chatbot({ userProfile }: ChatbotProps) {
         { role: "assistant", content: "Sorry, I'm having trouble connecting right now. Please try again in a moment." },
       ]);
     } finally {
-      loading && setLoading(false);
+      setLoading(false);
     }
   };
 
