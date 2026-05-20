@@ -64,65 +64,60 @@ export function Chatbot({ userProfile }: ChatbotProps) {
   };
 
   const sendMessage = async () => {
-  if (!input.trim() || loading) return;
+    if (!input.trim() || loading) return;
 
-  const userMsg: Msg = { role: "user", content: input.trim() };
-  setMessages((prev) => [...prev, userMsg]);
-  const currentInput = input.trim();
-  setInput("");
-  setLoading(true);
+    const userMsg: Msg = { role: "user", content: input.trim() };
+    const nextMessages = [...messages, userMsg];
+    setMessages(nextMessages);
+    setInput("");
+    setLoading(true);
 
-  try {
-    // 1. നിങ്ങളുടെ .env ഫയലിലെ കീ കൃത്യമായി എടുക്കുന്നു
-    const apiKey = import.meta.env.VITE_GEMINI_API_KEY;
-    
-    if (!apiKey) {
-      throw new Error("API Key missing in .env file!");
-    }
+    try {
+      const apiKey = import.meta.env.VITE_GEMINI_API_KEY;
+      if (!apiKey) throw new Error("Missing VITE_GEMINI_API_KEY");
 
-    const contextText = `User Profile - Name: ${studentName || 'Student'}, Course: ${courseName || 'UG'}, Semester: ${semester || '1'}.`;
+      // കറക്റ്റ് API URL
+      const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`;
 
-    // 3. നേരിട്ട് ഗൂഗിൾ API യുആർഎൽ വിളിക്കുന്നു (ഇത് ക്രാഷ് ആകില്ല)
-    const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`;
+      // കൺവെർസേഷൻ ഹിസ്റ്ററി ശരിയായ ഫോർമാറ്റിലേക്ക് മാറ്റുന്നു
+      const conversation = nextMessages.map((m) => ({
+        role: m.role === "assistant" ? "model" : "user",
+        parts: [{ text: m.content }],
+      }));
 
-    const response = await fetch(url, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        contents: [
-          {
-            role: "user",
-            parts: [
-              { text: `System Instruction: You are a helpful CU Study assistant. Use the following student context to answer queries: ${contextText}` },
-              { text: currentInput }
-            ]
-          }
-        ]
-      })
-    });
+      // സിസ്റ്റം ഇൻസ്ട്രക്ഷൻ ആദ്യത്തെ മെസ്സേജിന്റെ കൂടെ സുരക്ഷിതമായി ചേർക്കുന്നു
+      const systemPrompt = buildSystemPrompt();
+      const requestContents = [
+        {
+          role: "user",
+          parts: [{ text: `System Instruction: ${systemPrompt}` }]
+        },
+        ...conversation
+      ];
 
-    const data = await response.json();
+      const response = await fetch(url, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          contents: requestContents, // ഗൂഗിൾ സ്വീകരിക്കുന്ന കറക്റ്റ് സ്ട്രക്ചർ
+        }),
+      });
 
-    if (data.candidates && data.candidates[0].content) {
-      const text = data.candidates[0].content.parts[0].text;
+      const data = await response.json();
+      const text = data?.candidates?.[0]?.content?.parts?.[0]?.text;
+      if (!text) throw new Error(data?.error?.message || "Invalid response");
+
       setMessages((prev) => [...prev, { role: "assistant", content: text }]);
-    } else {
-      console.error("API Error Response:", data);
-      throw new Error("Invalid response from Gemini");
+    } catch (err: any) {
+      console.error("Gemini Error:", err);
+      setMessages((prev) => [
+        ...prev,
+        { role: "assistant", content: "Sorry, I'm having trouble connecting right now. Please try again in a moment." },
+      ]);
+    } finally {
+      loading && setLoading(false);
     }
-
-  } catch (err: any) {
-    console.error("Gemini Error:", err);
-    setMessages((prev) => [
-      ...prev, 
-      { role: "assistant", content: "Sorry, I'm having trouble connecting to Gemini. Please check your internet or API key." }
-    ]);
-  } finally {
-    setLoading(false);
-  }
-};
+  };
 
   return (
     <>
