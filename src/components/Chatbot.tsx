@@ -76,34 +76,38 @@ export function Chatbot({ userProfile }: ChatbotProps) {
       const apiKey = import.meta.env.VITE_GEMINI_API_KEY;
       if (!apiKey) throw new Error("Missing VITE_GEMINI_API_KEY");
 
-      // കറക്റ്റ് ആക്കിയ URL (v1 കൂടാതെ models/ എന്ന് കൂടി ചേർത്തു)
-      const url = `https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash:generateContent?key=${apiKey}`;
+      // ഗൂഗിൾ നിർദ്ദേശിക്കുന്ന ഏറ്റവും കൃത്യമായ v1beta URL ഫോർമാറ്റ്
+      const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`;
 
+      // കോൺവർസേഷൻ ഹിസ്റ്ററി ഒഫീഷ്യൽ സ്ട്രക്ചറിലേക്ക് മാറ്റുന്നു
       const conversation = nextMessages.map((m) => ({
         role: m.role === "assistant" ? "model" : "user",
         parts: [{ text: m.content }],
       }));
 
       const systemPrompt = buildSystemPrompt();
-      const requestContents = [
-        {
-          role: "user",
-          parts: [{ text: `System Instruction: ${systemPrompt}` }]
-        },
-        ...conversation
-      ];
 
+      // എപിഐ സ്വീകരിക്കുന്ന ശരിയായ ഫോർമാറ്റിലേക്ക് ബോഡി മാറ്റുന്നു
       const response = await fetch(url, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          contents: requestContents,
+          contents: conversation,
+          systemInstruction: {
+            parts: [{ text: systemPrompt }]
+          }
         }),
       });
 
       const data = await response.json();
+      
+      // എന്തെങ്കിലും എപിഐ എറർ ഉണ്ടെങ്കിൽ അത് കൺസോളിൽ കാണാൻ
+      if (data.error) {
+        throw new Error(data.error.message || "Gemini API Error");
+      }
+
       const text = data?.candidates?.[0]?.content?.parts?.[0]?.text;
-      if (!text) throw new Error(data?.error?.message || "Invalid response");
+      if (!text) throw new Error("Invalid response structure from Gemini");
 
       setMessages((prev) => [...prev, { role: "assistant", content: text }]);
     } catch (err: any) {
