@@ -72,12 +72,21 @@ const StudentDashboard = () => {
 
   const fetchProfile = async () => {
     if (!user) return;
-    const { data } = await supabase
-      .from("profiles")
-      .select("full_name, course_id, current_semester, courses:course_id(name)")
-      .eq("user_id", user.id)
-      .maybeSingle();
-    if (data) setProfile(data as any);
+    try {
+      const { data, error } = await supabase
+        .from("profiles")
+        .select("full_name, course_id, current_semester, courses:course_id(name)")
+        .eq("user_id", user.id)
+        .maybeSingle();
+      if (error) {
+        console.warn("Profile fetch error:", error.message);
+        return;
+      }
+      // Always set (even if null) so UI reflects latest state
+      setProfile((data as any) ?? { full_name: null, course_id: null, current_semester: null, courses: null });
+    } catch (e) {
+      console.warn("Profile fetch failed:", e);
+    }
   };
 
   const fetchAnnouncements = async () => {

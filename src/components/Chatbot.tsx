@@ -4,66 +4,109 @@ import { Input } from "@/components/ui/input";
 import { MessageCircle, Send, X, Bot } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import ReactMarkdown from "react-markdown";
-import { GoogleGenerativeAI } from "@google/generative-ai";
 
 type Msg = { role: "user" | "assistant"; content: string };
 
-export function Chatbot() {
+interface UserProfileContext {
+  full_name?: string | null;
+  current_semester?: number | null;
+  courses?: { name?: string } | null;
+}
+
+interface ChatbotProps {
+  userProfile?: UserProfileContext | null;
+}
+
+export function Chatbot({ userProfile }: ChatbotProps) {
   const [open, setOpen] = useState(false);
-  const [messages, setMessages] = useState<Msg[]>([
-    { role: "assistant", content: "Hi! I'm your CU Study assistant. How can I help you today?" },
-  ]);
+  const [messages, setMessages] = useState<Msg[]>([]);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
+
+  const studentName = userProfile?.full_name?.trim() || "";
+  const courseName = userProfile?.courses?.name || "";
+  const semester = userProfile?.current_semester || null;
+
+  // Greet (and re-greet) when profile becomes available or changes
+  useEffect(() => {
+    const greeting = studentName
+      ? `Hi ${studentName}! I'm your CU Study assistant${
+          courseName ? ` for ${courseName}${semester ? `, Semester ${semester}` : ""}` : ""
+        }. How can I help you today?`
+      : "Hi! I'm your CU Study assistant. How can I help you today?";
+    setMessages([{ role: "assistant", content: greeting }]);
+  }, [studentName, courseName, semester]);
 
   useEffect(() => {
     if (scrollRef.current) scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
   }, [messages, loading]);
 
-  const sendMessage = async () => {
-  if (!input.trim() || loading) return;
-
-  const userMsg: Msg = { role: "user", content: input.trim() };
-  setMessages((prev) => [...prev, userMsg]);
-  const currentInput = input.trim();
-  setInput("");
-  setLoading(true);
-
-  try {
-    const apiKey ="AIzaSyCsnUP07HuUckHCstZCfrhIutcBu0c0P8c";
-    const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`;
-    const response = await fetch(url, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        contents: [{
-          parts: [{ text: currentInput }]
-        }]
-      })
-    });
-
-    const data = await response.json();
-
-    if (data.candidates && data.candidates[0].content.parts[0].text) {
-      const text = data.candidates[0].content.parts[0].text;
-      setMessages((prev) => [...prev, { role: "assistant", content: text }]);
-    } else {
-      throw new Error("Invalid response from API");
+  const buildSystemPrompt = () => {
+    const parts: string[] = [
+      "You are a helpful study assistant for Calicut University students.",
+      "Help with course-related questions, study tips, concept explanations, exam preparation, and academic guidance.",
+      "Keep answers clear, concise, and student-friendly. Use markdown formatting.",
+    ];
+    const ctx: string[] = [];
+    if (studentName) ctx.push(`Student name: ${studentName}`);
+    if (courseName) ctx.push(`Course: ${courseName}`);
+    if (semester) ctx.push(`Current semester: ${semester}`);
+    if (ctx.length) {
+      parts.push(
+        `You already know the following about the student — do NOT ask them for these details again:\n${ctx
+          .map((c) => `- ${c}`)
+          .join("\n")}`
+      );
+      if (studentName) parts.push(`Address the student by their first name when natural.`);
     }
+    return parts.join("\n\n");
+  };
 
-  } catch (err: any) {
-    console.error("Gemini Direct Error:", err);
-    setMessages((prev) => [
-      ...prev, 
-      { role: "assistant", content: "Sorry, I'm having trouble connecting. Please check your internet or API key." }
-    ]);
-  } finally {
-    setLoading(false);
-  }
-};
+  const sendMessage = async () => {
+    if (!input.trim() || loading) return;
+
+    const userMsg: Msg = { role: "user", content: input.trim() };
+    const nextMessages = [...messages, userMsg];
+    setMessages(nextMessages);
+    setInput("");
+    setLoading(true);
+
+    try {
+      const apiKey = import.meta.env.VITE_GEMINI_API_KEY;
+      if (!apiKey) throw new Error("Missing VITE_GEMINI_API_KEY");
+
+      const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`;
+
+      const conversation = nextMessages.map((m) => ({
+        role: m.role === "assistant" ? "model" : "user",
+        parts: [{ text: m.content }],
+      }));
+
+      const response = await fetch(url, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          system_instruction: { parts: [{ text: buildSystemPrompt() }] },
+          contents: conversation,
+        }),
+      });
+
+      const data = await response.json();
+      const text = data?.candidates?.[0]?.content?.parts?.[0]?.text;
+      if (!text) throw new Error(data?.error?.message || "Invalid response");
+
+      setMessages((prev) => [...prev, { role: "assistant", content: text }]);
+    } catch (err: any) {
+      console.error("Gemini Error:", err);
+      setMessages((prev) => [
+        ...prev,
+        { role: "assistant", content: "Sorry, I'm having trouble connecting right now. Please try again in a moment." },
+      ]);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   return (
     <>
@@ -106,12 +149,12 @@ export function Chatbot() {
             </div>
 
             <form onSubmit={(e) => { e.preventDefault(); sendMessage(); }} className="p-3 bg-white border-t flex gap-2">
-              <Input 
-                value={input} 
-                onChange={(e) => setInput(e.target.value)} 
-                placeholder="Ask about studies..." 
-                disabled={loading} 
-                className="rounded-full" 
+              <Input
+                value={input}
+                onChange={(e) => setInput(e.target.value)}
+                placeholder="Ask about studies..."
+                disabled={loading}
+                className="rounded-full"
               />
               <Button type="submit" disabled={loading || !input.trim()} className="rounded-full bg-blue-600 hover:bg-blue-700">
                 <Send size={18} />
