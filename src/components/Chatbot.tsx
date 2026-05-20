@@ -77,8 +77,7 @@ export function Chatbot({ userProfile }: ChatbotProps) {
       if (!apiKey) throw new Error("Missing VITE_GEMINI_API_KEY");
 
       // കറക്റ്റ് API URL
-      const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`;
-
+      const url = `https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash:generateContent?key=${apiKey}`;
       // കൺവെർസേഷൻ ഹിസ്റ്ററി ശരിയായ ഫോർമാറ്റിലേക്ക് മാറ്റുന്നു
       const conversation = nextMessages.map((m) => ({
         role: m.role === "assistant" ? "model" : "user",
