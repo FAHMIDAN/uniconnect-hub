@@ -80,9 +80,7 @@ export function Chatbot({ userProfile }: ChatbotProps) {
       throw new Error("API Key missing in .env file!");
     }
 
-    // 2. ലോവബിൾ ഉണ്ടാക്കിയ പ്രൊഫൈൽ വിവരങ്ങൾ (context) എടുക്കുന്നു (നിങ്ങളുടെ കോഡിൽ ഉള്ളതുപോലെ)
-    // ഉദാഹരണത്തിന്: "Name: fahmida, Course: BSc Computer Science, Semester: 1"
-    const contextText = `User Profile - Name: ${profile?.full_name || 'Student'}, Course: ${profile?.course || 'UG'}, Semester: ${profile?.semester || '1'}.`;
+    const contextText = `User Profile - Name: ${studentName || 'Student'}, Course: ${courseName || 'UG'}, Semester: ${semester || '1'}.`;
 
     // 3. നേരിട്ട് ഗൂഗിൾ API യുആർഎൽ വിളിക്കുന്നു (ഇത് ക്രാഷ് ആകില്ല)
     const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`;
