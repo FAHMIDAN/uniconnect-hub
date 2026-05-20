@@ -4,6 +4,7 @@ import { Input } from "@/components/ui/input";
 import { MessageCircle, Send, X, Bot } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import ReactMarkdown from "react-markdown";
+import { GoogleGenAI } from "@google/generative-ai";
 
 type Msg = { role: "user" | "assistant"; content: string };
 
@@ -28,7 +29,6 @@ export function Chatbot({ userProfile }: ChatbotProps) {
   const courseName = userProfile?.courses?.name || "";
   const semester = userProfile?.current_semester || null;
 
-  // Greet (and re-greet) when profile becomes available or changes
   useEffect(() => {
     const greeting = studentName
       ? `Hi ${studentName}! I'm your CU Study assistant${
@@ -76,42 +76,31 @@ export function Chatbot({ userProfile }: ChatbotProps) {
       const apiKey = import.meta.env.VITE_GEMINI_API_KEY;
       if (!apiKey) throw new Error("Missing VITE_GEMINI_API_KEY");
 
-      // ഗൂഗിൾ നിർദ്ദേശിക്കുന്ന ഏറ്റവും കൃത്യമായ v1beta URL ഫോർമാറ്റ്
-      const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`;
-
-      // കോൺവർസേഷൻ ഹിസ്റ്ററി ഒഫീഷ്യൽ സ്ട്രക്ചറിലേക്ക് മാറ്റുന്നു
-      const conversation = nextMessages.map((m) => ({
-        role: m.role === "assistant" ? "model" : "user",
-        parts: [{ text: m.content }],
-      }));
-
-      const systemPrompt = buildSystemPrompt();
-
-      // എപിഐ സ്വീകരിക്കുന്ന ശരിയായ ഫോർമാറ്റിലേക്ക് ബോഡി മാറ്റുന്നു
-      const response = await fetch(url, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          contents: conversation,
-          systemInstruction: {
-            parts: [{ text: systemPrompt }]
-          }
-        }),
+      // ഒഫീഷ്യൽ പാക്കേജ് ഉപയോഗിച്ച് എപിഐ കണക്ട് ചെയ്യുന്നു
+      const ai = new GoogleGenAI({ apiKey });
+      
+      // ചാറ്റ് മോഡൽ സെറ്റ് ചെയ്യുന്നു
+      const model = ai.getGenerativeModel({
+        model: "gemini-1.5-flash",
+        systemInstruction: buildSystemPrompt()
       });
 
-      const data = await response.json();
-      
-      // എന്തെങ്കിലും എപിഐ എറർ ഉണ്ടെങ്കിൽ അത് കൺസോളിൽ കാണാൻ
-      if (data.error) {
-        throw new Error(data.error.message || "Gemini API Error");
-      }
+      // പഴയ മെസ്സേജുകൾ ചാറ്റ് ഹിസ്റ്ററി ഫോർമാറ്റിലേക്ക് മാറ്റുന്നു
+      const history = messages.map(m => ({
+        role: m.role === "assistant" ? "model" : "user",
+        parts: [{ text: m.content }]
+      }));
 
-      const text = data?.candidates?.[0]?.content?.parts?.[0]?.text;
-      if (!text) throw new Error("Invalid response structure from Gemini");
+      // ചാറ്റ് സെഷൻ തുടങ്ങി പുതിയ മെസ്സേജ് അയക്കുന്നു
+      const chat = model.startChat({ history });
+      const result = await chat.sendMessage(input.trim());
+      const text = result.response.text();
+
+      if (!text) throw new Error("No response text");
 
       setMessages((prev) => [...prev, { role: "assistant", content: text }]);
     } catch (err: any) {
-      console.error("Gemini Error:", err);
+      console.error("Gemini Package Error:", err);
       setMessages((prev) => [
         ...prev,
         { role: "assistant", content: "Sorry, I'm having trouble connecting right now. Please try again in a moment." },
@@ -131,8 +120,7 @@ export function Chatbot({ userProfile }: ChatbotProps) {
             </Button>
           </motion.div>
         )}
-      </AnimatePresence>
-
+      </>
       <AnimatePresence>
         {open && (
           <motion.div
