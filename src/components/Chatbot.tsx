@@ -4,7 +4,6 @@ import { Input } from "@/components/ui/input";
 import { MessageCircle, Send, X, Bot } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import ReactMarkdown from "react-markdown";
-import { GoogleGenAI } from "@google/generative-ai";
 
 type Msg = { role: "user" | "assistant"; content: string };
 
@@ -76,26 +75,29 @@ export function Chatbot({ userProfile }: ChatbotProps) {
       const apiKey = import.meta.env.VITE_GEMINI_API_KEY;
       if (!apiKey) throw new Error("Missing VITE_GEMINI_API_KEY");
 
-      const ai = new GoogleGenAI({ apiKey });
-      const model = ai.getGenerativeModel({
-        model: "gemini-1.5-flash",
-        systemInstruction: buildSystemPrompt()
-      });
+      const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`;
 
-      const history = messages.map(m => ({
+      const conversation = nextMessages.map((m) => ({
         role: m.role === "assistant" ? "model" : "user",
-        parts: [{ text: m.content }]
+        parts: [{ text: m.content }],
       }));
 
-      const chat = model.startChat({ history });
-      const result = await chat.sendMessage(input.trim());
-      const text = result.response.text();
+      const response = await fetch(url, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          system_instruction: { parts: [{ text: buildSystemPrompt() }] },
+          contents: conversation,
+        }),
+      });
 
-      if (!text) throw new Error("No response text");
+      const data = await response.json();
+      const text = data?.candidates?.[0]?.content?.parts?.[0]?.text;
+      if (!text) throw new Error(data?.error?.message || "Invalid response");
 
       setMessages((prev) => [...prev, { role: "assistant", content: text }]);
     } catch (err: any) {
-      console.error("Gemini Package Error:", err);
+      console.error("Gemini Error:", err);
       setMessages((prev) => [
         ...prev,
         { role: "assistant", content: "Sorry, I'm having trouble connecting right now. Please try again in a moment." },
@@ -115,7 +117,8 @@ export function Chatbot({ userProfile }: ChatbotProps) {
             </Button>
           </motion.div>
         )}
-      </>
+      </AnimatePresence>
+
       <AnimatePresence>
         {open && (
           <motion.div
