@@ -76,22 +76,17 @@ export function Chatbot({ userProfile }: ChatbotProps) {
       const apiKey = import.meta.env.VITE_GEMINI_API_KEY;
       if (!apiKey) throw new Error("Missing VITE_GEMINI_API_KEY");
 
-      // ഒഫീഷ്യൽ പാക്കേജ് ഉപയോഗിച്ച് എപിഐ കണക്ട് ചെയ്യുന്നു
       const ai = new GoogleGenAI({ apiKey });
-      
-      // ചാറ്റ് മോഡൽ സെറ്റ് ചെയ്യുന്നു
       const model = ai.getGenerativeModel({
         model: "gemini-1.5-flash",
         systemInstruction: buildSystemPrompt()
       });
 
-      // പഴയ മെസ്സേജുകൾ ചാറ്റ് ഹിസ്റ്ററി ഫോർമാറ്റിലേക്ക് മാറ്റുന്നു
       const history = messages.map(m => ({
         role: m.role === "assistant" ? "model" : "user",
         parts: [{ text: m.content }]
       }));
 
-      // ചാറ്റ് സെഷൻ തുടങ്ങി പുതിയ മെസ്സേജ് അയക്കുന്നു
       const chat = model.startChat({ history });
       const result = await chat.sendMessage(input.trim());
       const text = result.response.text();
