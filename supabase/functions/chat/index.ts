@@ -1,58 +1,64 @@
-import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { corsHeaders } from "npm:@supabase/supabase-js@2/cors";
 
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
-};
-
-serve(async (req) => {
-  // CORS pre-flight request handle cheyyan
+Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
   try {
     const { messages, profileContext } = await req.json();
-    
-    // Terminal-il error ullathu kondu namukk key nerittu ivide nalkam
-    const GEMINI_KEY = "d9c4eb041aeea9dd936bd1c5dd1249d27ec02835315f56b61c186382927fc7fe";
 
-    const systemPrompt = `You are a helpful study assistant for Calicut University students. Help with course-related questions, study tips, explanations of concepts, exam preparation, and academic guidance. Keep answers clear, concise, and student-friendly. Use markdown formatting for better readability.${profileContext || ""}`;
+    const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
+    if (!LOVABLE_API_KEY) {
+      console.error("Missing LOVABLE_API_KEY");
+      return new Response(JSON.stringify({ error: "AI service not configured" }), {
+        status: 500,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
 
-    const response = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${GEMINI_KEY}`,
-      {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          contents: [
-            {
-              role: "user",
-              parts: [{ text: systemPrompt }],
-            },
-            ...messages.map((m: any) => ({
-              role: m.role === "assistant" ? "model" : "user",
-              parts: [{ text: m.content }],
-            })),
-          ],
-        }),
-      }
-    );
+    const systemPrompt = `You are a helpful study assistant for Sullamussalaam Science College students under Calicut University. Help with course-related questions, study tips, concept explanations, exam preparation, and academic guidance based on the FYUGP syllabus. Keep answers clear, concise, and student-friendly. Use markdown formatting.${profileContext ? "\n\n" + profileContext : ""}`;
+
+    const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${LOVABLE_API_KEY}`,
+      },
+      body: JSON.stringify({
+        model: "google/gemini-2.5-flash",
+        messages: [
+          { role: "system", content: systemPrompt },
+          ...(messages ?? []).map((m: any) => ({ role: m.role, content: m.content })),
+        ],
+      }),
+    });
 
     if (!response.ok) {
-        const errorText = await response.text();
-        console.error("Gemini API Error:", errorText);
-        return new Response(JSON.stringify({ error: "Gemini API error" }), {
-            status: response.status,
-            headers: { ...corsHeaders, "Content-Type": "application/json" },
+      const errorText = await response.text();
+      console.error("Lovable AI error:", response.status, errorText);
+      if (response.status === 429) {
+        return new Response(JSON.stringify({ error: "Rate limit exceeded. Please try again shortly." }), {
+          status: 429,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
+      }
+      if (response.status === 402) {
+        return new Response(JSON.stringify({ error: "AI credits exhausted. Please add credits in workspace settings." }), {
+          status: 402,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+      return new Response(JSON.stringify({ error: "AI gateway error" }), {
+        status: response.status,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
     }
 
     const data = await response.json();
-    const reply = data.candidates?.[0]?.content?.parts?.[0]?.text || "Sorry, I couldn't process that.";
+    const reply = data?.choices?.[0]?.message?.content ?? "Sorry, I couldn't process that.";
 
     return new Response(JSON.stringify({ content: reply }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
-
   } catch (e) {
     console.error("Chat error:", e);
     return new Response(JSON.stringify({ error: e instanceof Error ? e.message : "Unknown error" }), {
