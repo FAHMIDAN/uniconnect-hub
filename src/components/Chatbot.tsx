@@ -4,8 +4,10 @@ import { Input } from "@/components/ui/input";
 import { MessageCircle, Send, X, Bot } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import ReactMarkdown from "react-markdown";
+import { supabase } from "@/integrations/supabase/client";
 
 type Msg = { role: "user" | "assistant"; content: string };
+
 
 interface UserProfileContext {
   full_name?: string | null;
