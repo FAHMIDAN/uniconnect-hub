@@ -4,8 +4,10 @@ import { Input } from "@/components/ui/input";
 import { MessageCircle, Send, X, Bot } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import ReactMarkdown from "react-markdown";
+import { supabase } from "@/integrations/supabase/client";
 
 type Msg = { role: "user" | "assistant"; content: string };
+
 
 interface UserProfileContext {
   full_name?: string | null;
@@ -72,42 +74,38 @@ export function Chatbot({ userProfile }: ChatbotProps) {
     setLoading(true);
 
     try {
-      const apiKey = import.meta.env.VITE_GEMINI_API_KEY;
-      if (!apiKey) throw new Error("Missing VITE_GEMINI_API_KEY");
+      const profileCtx: string[] = [];
+      if (studentName) profileCtx.push(`Student name: ${studentName}`);
+      if (courseName) profileCtx.push(`Course: ${courseName}`);
+      if (semester) profileCtx.push(`Current semester: ${semester}`);
+      const profileContext = profileCtx.length
+        ? `You already know the following about the student — do NOT ask again:\n${profileCtx.map((c) => `- ${c}`).join("\n")}${studentName ? "\nAddress the student by their first name when natural." : ""}`
+        : "";
 
-      // Gemini API URL
-      const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`;
+      console.log("[Chatbot] sending", { messageCount: nextMessages.length, profileContext });
 
-      // Gemini എപ്പോഴും പ്രതീക്ഷിക്കുന്നത് 'model' എന്ന റോളാണ്, 'assistant' അല്ല.
-      const conversation = nextMessages.map((m) => ({
-        role: m.role === "assistant" ? "model" : "user",
-        parts: [{ text: m.content }],
-      }));
-
-      const response = await fetch(url, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          system_instruction: { parts: [{ text: buildSystemPrompt() }] },
-          contents: conversation,
-        }),
+      const { data, error } = await supabase.functions.invoke("chat", {
+        body: { messages: nextMessages, profileContext },
       });
 
-      const data = await response.json();
-      const text = data?.candidates?.[0]?.content?.parts?.[0]?.text;
-      if (!text) throw new Error(data?.error?.message || "Invalid response");
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+
+      const text = data?.content;
+      if (!text) throw new Error("Empty response from AI");
 
       setMessages((prev) => [...prev, { role: "assistant", content: text }]);
     } catch (err: any) {
-      console.error("Gemini Error:", err);
+      console.error("[Chatbot] error:", err);
       setMessages((prev) => [
         ...prev,
-        { role: "assistant", content: "Sorry, I'm having trouble connecting right now. Please try again." },
+        { role: "assistant", content: "Sorry, I'm having trouble connecting right now. Please try again in a moment." },
       ]);
     } finally {
-      setLoading(false); // ഇവിടെ മുൻപ് 'Loading(false)' എന്നായിരുന്നു, അതാണ് എറർ വരാൻ കാരണം.
+      setLoading(false);
     }
   };
+
 
   return (
     <>
