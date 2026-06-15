@@ -46,7 +46,7 @@ const Signup = () => {
             <GraduationCap className="h-6 w-6 text-primary-foreground" />
           </div>
           <h1 className="font-heading font-bold text-2xl text-foreground">Create account</h1>
-          <p className="text-sm text-muted-foreground font-body mt-1">Join CU StudyHub today</p>
+          <p className="text-sm text-muted-foreground font-body mt-1">Join env today</p>
         </div>
 
         <form onSubmit={handleSubmit} className="glass-card rounded-xl p-6 space-y-4">

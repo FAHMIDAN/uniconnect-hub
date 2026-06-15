@@ -50,7 +50,7 @@ const AdminLogin = () => {
           </div>
           <h1 className="font-heading font-bold text-2xl text-foreground">Admin Login</h1>
           <p className="text-sm text-muted-foreground font-body mt-1">
-            CU StudyHub — Administrative Access
+            SSC STUDY HUB — Administrative Access
           </p>
         </div>
 

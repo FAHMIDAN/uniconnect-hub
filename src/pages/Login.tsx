@@ -41,7 +41,7 @@ const Login = () => {
             <GraduationCap className="h-6 w-6 text-primary-foreground" />
           </div>
           <h1 className="font-heading font-bold text-2xl text-foreground">Welcome back</h1>
-          <p className="text-sm text-muted-foreground font-body mt-1">Sign in to CU StudyHub</p>
+          <p className="text-sm text-muted-foreground font-body mt-1">Sign in to SSC STUDY HUB</p>
         </div>
 
         <form onSubmit={handleSubmit} className="glass-card rounded-xl p-6 space-y-4">

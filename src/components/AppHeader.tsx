@@ -28,7 +28,7 @@ export function AppHeader() {
           <div className="gradient-primary p-1.5 rounded-lg">
             <GraduationCap className="h-4 w-4 text-primary-foreground" />
           </div>
-          <span className="font-heading font-bold text-foreground text-sm">CU StudyHub</span>
+          <span className="font-heading font-bold text-foreground text-sm">SSC STUDY HUB</span>
         </Link>
 
         <nav className="flex items-center gap-1">

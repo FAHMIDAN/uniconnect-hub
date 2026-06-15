@@ -70,7 +70,7 @@ const Index = () => {
           <div className="inline-flex gradient-primary p-3 rounded-xl mb-4">
             <GraduationCap className="h-7 w-7 text-primary-foreground" />
           </div>
-          <h1 className="font-heading font-bold text-2xl text-foreground">CU StudyHub</h1>
+          <h1 className="font-heading font-bold text-2xl text-foreground">SSC STUDY HUB</h1>
           <p className="text-sm text-muted-foreground font-body mt-1">
             Calicut University Study Materials Portal
           </p>
