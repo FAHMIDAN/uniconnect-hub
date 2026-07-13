@@ -67,11 +67,26 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const signUp = async (email: string, password: string, fullName: string) => {
+    // 1. കർശനമായ വാലിഡേഷൻ: അക്ഷരങ്ങളും സ്പേസും മാത്രമാണോ എന്ന് പരിശോധിക്കുന്നു
+    const nameRegex = /^[A-Za-z\s]+$/;
+
+    if (!fullName || !fullName.trim()) {
+      throw new Error("Please enter your full name.");
+    }
+
+    if (!nameRegex.test(fullName.trim())) {
+      // നമ്പറോ സ്പെഷ്യൽ ക്യാരക്ടറോ ഉണ്ടെങ്കിൽ ഇവിടെ വച്ച് എറർ ത്രോ ചെയ്യും.
+      // ഇത് താഴെയുള്ള Supabase.auth.signUp ലോജിക്കിലേക്ക് ഡാറ്റയെ കടത്തിവിടില്ല!
+      throw new Error("Numbers and Special characters are strictly not allowed in Full Name!");
+    }
+
+    // 2. വാലിഡേഷൻ പാസ്സായാൽ മാത്രം Supabase-ലേക്ക് അയക്കുന്നു
     const { error } = await supabase.auth.signUp({
       email,
       password,
-      options: { data: { full_name: fullName } },
+      options: { data: { full_name: fullName.trim() } },
     });
+    
     if (error) throw error;
   };
 
