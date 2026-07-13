@@ -18,10 +18,20 @@ const Signup = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    // 1. Full Name Validation: Strictly only alphabets and spaces, length between 2 to 50
+    const nameRegex = /^[A-Za-z\s]{2,50}$/;
+    if (!nameRegex.test(fullName.trim())) {
+      toast.error("Full Name must contain only alphabets and spaces (Min 2 characters)");
+      return; // Signup function thടരുന്നതു ഇവിടെ വച്ചു ബ്ലോക്ക് ചെയ്യും
+    }
+
+    // 2. Password Length Validation
     if (password.length < 6) {
       toast.error("Password must be at least 6 characters");
       return;
     }
+
     setLoading(true);
     try {
       await signUp(email, password, fullName);
