@@ -90,11 +90,27 @@ const StudentDashboard = () => {
   };
 
   const fetchAnnouncements = async () => {
-    const { data } = await supabase
+    if (!user) return;
+    const { data: profileData } = await supabase
+      .from("profiles")
+      .select("current_semester")
+      .eq("user_id", user.id)
+      .maybeSingle();
+    const sem = profileData?.current_semester ?? null;
+
+    let query = supabase
       .from("announcements")
-      .select("id, title, message, created_at, courses:course_id(name)")
+      .select("id, title, message, created_at, semester, courses:course_id(name)")
       .order("created_at", { ascending: false })
-      .limit(5);
+      .limit(20);
+
+    if (sem) {
+      query = query.or(`semester.is.null,semester.eq.${sem}`);
+    } else {
+      query = query.is("semester", null);
+    }
+
+    const { data } = await query;
     if (data) setAnnouncements(data as any);
   };
 
