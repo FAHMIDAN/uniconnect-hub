@@ -153,14 +153,14 @@ const AdminDashboard = () => {
     }
     setAnnSending(true);
     const { error } = await supabase.from("announcements").insert({
-      title: annTitle, message: annMessage, course_id: annCourse === "all" ? null : annCourse, created_by: user!.id,
+      title: annTitle, message: annMessage, course_id: annCourse === "all" ? null : annCourse, semester: annSemester === "all" ? null : Number(annSemester), created_by: user!.id,
     });
     if (error) {
       toast.error("Failed to send: " + error.message);
     } else {
       toast.success("Announcement sent!");
       setAnnouncementDialogOpen(false);
-      setAnnTitle(""); setAnnMessage(""); setAnnCourse("all");
+      setAnnTitle(""); setAnnMessage(""); setAnnCourse("all"); setAnnSemester("all");
       fetchAnnouncements();
     }
     setAnnSending(false);
