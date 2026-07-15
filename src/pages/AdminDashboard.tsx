@@ -50,6 +50,7 @@ const AdminDashboard = () => {
   const [annTitle, setAnnTitle] = useState("");
   const [annMessage, setAnnMessage] = useState("");
   const [annCourse, setAnnCourse] = useState("all");
+  const [annSemester, setAnnSemester] = useState("all");
   const [annSending, setAnnSending] = useState(false);
 
   useEffect(() => {
@@ -152,14 +153,14 @@ const AdminDashboard = () => {
     }
     setAnnSending(true);
     const { error } = await supabase.from("announcements").insert({
-      title: annTitle, message: annMessage, course_id: annCourse === "all" ? null : annCourse, created_by: user!.id,
+      title: annTitle, message: annMessage, course_id: annCourse === "all" ? null : annCourse, semester: annSemester === "all" ? null : Number(annSemester), created_by: user!.id,
     });
     if (error) {
       toast.error("Failed to send: " + error.message);
     } else {
       toast.success("Announcement sent!");
       setAnnouncementDialogOpen(false);
-      setAnnTitle(""); setAnnMessage(""); setAnnCourse("all");
+      setAnnTitle(""); setAnnMessage(""); setAnnCourse("all"); setAnnSemester("all");
       fetchAnnouncements();
     }
     setAnnSending(false);
@@ -224,6 +225,18 @@ const AdminDashboard = () => {
                     <SelectContent>
                       <SelectItem value="all">All Courses</SelectItem>
                       {courses.map((c) => (<SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div>
+                  <Label className="font-body text-sm">Target Semester</Label>
+                  <Select value={annSemester} onValueChange={setAnnSemester}>
+                    <SelectTrigger className="mt-1 font-body"><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All Semesters</SelectItem>
+                      {Array.from({ length: 8 }, (_, i) => i + 1).map((s) => (
+                        <SelectItem key={s} value={String(s)}>Semester {s}</SelectItem>
+                      ))}
                     </SelectContent>
                   </Select>
                 </div>
