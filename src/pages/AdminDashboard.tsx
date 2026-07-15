@@ -50,6 +50,7 @@ const AdminDashboard = () => {
   const [annTitle, setAnnTitle] = useState("");
   const [annMessage, setAnnMessage] = useState("");
   const [annCourse, setAnnCourse] = useState("all");
+  const [annSemester, setAnnSemester] = useState("all");
   const [annSending, setAnnSending] = useState(false);
 
   useEffect(() => {
