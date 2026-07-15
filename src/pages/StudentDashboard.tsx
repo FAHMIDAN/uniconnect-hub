@@ -93,24 +93,30 @@ const StudentDashboard = () => {
     if (!user) return;
     const { data: profileData } = await supabase
       .from("profiles")
-      .select("current_semester")
+      .select("current_semester, course_id")
       .eq("user_id", user.id)
       .maybeSingle();
     const sem = profileData?.current_semester ?? null;
+    const courseId = profileData?.course_id ?? null;
 
-    let query = supabase
+    // Require profile to be complete before showing any announcements
+    if (!sem || !courseId) {
+      setAnnouncements([]);
+      return;
+    }
+
+    const { data, error } = await supabase
       .from("announcements")
-      .select("id, title, message, created_at, semester, courses:course_id(name)")
+      .select("id, title, message, created_at, semester, course_id, courses:course_id(name)")
+      .or(`semester.is.null,semester.eq.${sem}`)
+      .or(`course_id.is.null,course_id.eq.${courseId}`)
       .order("created_at", { ascending: false })
       .limit(20);
 
-    if (sem) {
-      query = query.or(`semester.is.null,semester.eq.${sem}`);
-    } else {
-      query = query.is("semester", null);
+    if (error) {
+      console.warn("Announcements fetch error:", error.message);
+      return;
     }
-
-    const { data } = await query;
     if (data) setAnnouncements(data as any);
   };
 
