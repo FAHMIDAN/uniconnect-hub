@@ -228,6 +228,18 @@ const AdminDashboard = () => {
                     </SelectContent>
                   </Select>
                 </div>
+                <div>
+                  <Label className="font-body text-sm">Target Semester</Label>
+                  <Select value={annSemester} onValueChange={setAnnSemester}>
+                    <SelectTrigger className="mt-1 font-body"><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All Semesters</SelectItem>
+                      {Array.from({ length: 8 }, (_, i) => i + 1).map((s) => (
+                        <SelectItem key={s} value={String(s)}>Semester {s}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
                 <Button onClick={handleSendAnnouncement} disabled={annSending} className="w-full gradient-primary text-primary-foreground font-body gap-1.5">
                   <Send className="h-4 w-4" /> {annSending ? "Sending..." : "Send Announcement"}
                 </Button>
