@@ -403,6 +403,7 @@ const AdminDashboard = () => {
                     <TableHead className="font-heading text-xs">Title</TableHead>
                     <TableHead className="font-heading text-xs">Message</TableHead>
                     <TableHead className="font-heading text-xs hidden md:table-cell">Course</TableHead>
+                    <TableHead className="font-heading text-xs hidden md:table-cell">Semester</TableHead>
                     <TableHead className="font-heading text-xs hidden sm:table-cell">Date</TableHead>
                     <TableHead className="font-heading text-xs w-20">Actions</TableHead>
                   </TableRow>
@@ -413,6 +414,7 @@ const AdminDashboard = () => {
                       <TableCell className="font-body text-sm font-medium">{a.title}</TableCell>
                       <TableCell className="font-body text-xs text-muted-foreground max-w-[200px] truncate">{a.message}</TableCell>
                       <TableCell className="font-body text-xs hidden md:table-cell">{a.courses?.name || "All"}</TableCell>
+                      <TableCell className="font-body text-xs hidden md:table-cell">{a.semester ? `Semester ${a.semester}` : "All Semesters"}</TableCell>
                       <TableCell className="font-body text-xs hidden sm:table-cell">{a.created_at?.split("T")[0]}</TableCell>
                       <TableCell>
                         <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => handleDeleteAnnouncement(a.id)}>
@@ -422,7 +424,7 @@ const AdminDashboard = () => {
                     </TableRow>
                   ))}
                   {announcements.length === 0 && (
-                    <TableRow><TableCell colSpan={5} className="text-center py-8 text-muted-foreground font-body">No announcements yet.</TableCell></TableRow>
+                    <TableRow><TableCell colSpan={6} className="text-center py-8 text-muted-foreground font-body">No announcements yet.</TableCell></TableRow>
                   )}
                 </TableBody>
               </Table>
