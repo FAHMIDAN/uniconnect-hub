@@ -5,9 +5,13 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { GraduationCap, LogIn, UserPlus } from "lucide-react";
 import { toast } from "sonner";
 import { motion } from "framer-motion";
+import { supabase } from "@/integrations/supabase/client";
+
+type CourseOption = { id: string; name: string; code: string; semesters: number };
 
 const Index = () => {
   const { user, userRole, signIn, signUp } = useAuth();
@@ -26,7 +30,21 @@ const Index = () => {
   const [signupName, setSignupName] = useState("");
   const [signupEmail, setSignupEmail] = useState("");
   const [signupPassword, setSignupPassword] = useState("");
+  const [signupCourse, setSignupCourse] = useState("");
+  const [signupSemester, setSignupSemester] = useState("");
   const [signupLoading, setSignupLoading] = useState(false);
+  const [courses, setCourses] = useState<CourseOption[]>([]);
+
+  useEffect(() => {
+    supabase
+      .from("courses")
+      .select("id, name, code, semesters")
+      .order("name")
+      .then(({ data }) => setCourses(data ?? []));
+  }, []);
+
+  const selectedCourse = courses.find((c) => c.id === signupCourse);
+  const semCount = selectedCourse?.semesters ?? 8;
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -47,9 +65,17 @@ const Index = () => {
       toast.error("Password must be at least 6 characters");
       return;
     }
+    if (!signupCourse) {
+      toast.error("Please select your course");
+      return;
+    }
+    if (!signupSemester) {
+      toast.error("Please select your semester");
+      return;
+    }
     setSignupLoading(true);
     try {
-      await signUp(signupEmail, signupPassword, signupName);
+      await signUp(signupEmail, signupPassword, signupName, signupCourse, Number(signupSemester));
       toast.success("Account created! You can now sign in.");
       setTab("login");
     } catch (err: any) {
@@ -117,6 +143,32 @@ const Index = () => {
                 <div>
                   <Label className="font-body text-sm">Password</Label>
                   <Input type="password" value={signupPassword} onChange={(e) => setSignupPassword(e.target.value)} placeholder="Min 6 characters" required className="mt-1 font-body" />
+                </div>
+                <div>
+                  <Label className="font-body text-sm">Course</Label>
+                  <Select value={signupCourse} onValueChange={(v) => { setSignupCourse(v); setSignupSemester(""); }} required>
+                    <SelectTrigger className="mt-1 font-body">
+                      <SelectValue placeholder="Select your course" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {courses.map((c) => (
+                        <SelectItem key={c.id} value={c.id}>{c.name} ({c.code})</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div>
+                  <Label className="font-body text-sm">Semester</Label>
+                  <Select value={signupSemester} onValueChange={setSignupSemester} required>
+                    <SelectTrigger className="mt-1 font-body">
+                      <SelectValue placeholder="Select your semester" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {Array.from({ length: semCount }, (_, i) => (
+                        <SelectItem key={i + 1} value={String(i + 1)}>Semester {i + 1}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </div>
                 <Button type="submit" disabled={signupLoading} className="w-full gradient-primary text-primary-foreground font-body gap-2">
                   <UserPlus className="h-4 w-4" />
