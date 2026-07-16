@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
@@ -8,9 +8,27 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { GraduationCap, UserPlus } from "lucide-react";
 import { toast } from "sonner";
 import { motion } from "framer-motion";
-import { supabase } from "@/integrations/supabase/client";
 
-type CourseOption = { id: string; name: string; code: string; semesters: number };
+const HARDCODED_COURSES = [
+  {
+    id: "0ffdff6e-6fdb-420d-ba00-334969789fe6",
+    name: "BSc Computer Science",
+    code: "BSCCS",
+    semesters: 8,
+  },
+  {
+    id: "ee4a58ce-c14c-4f70-97ee-eb23f35d9384",
+    name: "BA English",
+    code: "BAENG",
+    semesters: 8,
+  },
+  {
+    id: "a3175d34-8e54-440f-845d-7f03ea0d1156",
+    name: "BA Economics",
+    code: "BAECO",
+    semesters: 8,
+  },
+];
 
 const Signup = () => {
   const [fullName, setFullName] = useState("");
@@ -18,25 +36,11 @@ const Signup = () => {
   const [password, setPassword] = useState("");
   const [courseId, setCourseId] = useState("");
   const [semester, setSemester] = useState("");
-  const [courses, setCourses] = useState<CourseOption[]>([]);
-  const [coursesLoading, setCoursesLoading] = useState(true);
   const [loading, setLoading] = useState(false);
   const { signUp } = useAuth();
   const navigate = useNavigate();
 
-  useEffect(() => {
-    setCoursesLoading(true);
-    supabase
-      .from("courses")
-      .select("id, name, code, semesters")
-      .order("name")
-      .then(({ data }) => {
-        setCourses(data ?? []);
-        setCoursesLoading(false);
-      });
-  }, []);
-
-  const selectedCourse = courses.find((c) => c.id === courseId);
+  const selectedCourse = HARDCODED_COURSES.find((c) => c.id === courseId);
   const semCount = selectedCourse?.semesters ?? 8;
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -102,16 +106,17 @@ const Signup = () => {
           </div>
           <div>
             <Label className="font-body text-sm">Course</Label>
-            <Select value={courseId} onValueChange={(v) => { setCourseId(v); setSemester(""); }} required disabled={coursesLoading}>
-              <SelectTrigger className="mt-1 font-body">
-                <SelectValue placeholder={coursesLoading ? "Loading courses..." : "Select your course"} />
-              </SelectTrigger>
-              <SelectContent>
-                {courses.map((c) => (
-                  <SelectItem key={c.id} value={c.id}>{c.name} ({c.code})</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <select
+              value={courseId}
+              onChange={(e) => { setCourseId(e.target.value); setSemester(""); }}
+              required
+              className="mt-1 flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm font-body ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+            >
+              <option value="" disabled>Select your course</option>
+              {HARDCODED_COURSES.map((c) => (
+                <option key={c.id} value={c.id}>{c.name} ({c.code})</option>
+              ))}
+            </select>
           </div>
           <div>
             <Label className="font-body text-sm">Semester</Label>
