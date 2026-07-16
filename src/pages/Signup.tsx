@@ -25,10 +25,25 @@ const Signup = () => {
   const [courseId, setCourseId] = useState("");
   const [semester, setSemester] = useState("");
   const [loading, setLoading] = useState(false);
+  const [courses, setCourses] = useState<CourseOption[]>(FALLBACK_COURSES);
+  const [coursesLoading, setCoursesLoading] = useState(true);
   const { signUp } = useAuth();
   const navigate = useNavigate();
 
-  const selectedCourse = HARDCODED_COURSES.find((c) => c.id === courseId);
+  useEffect(() => {
+    let active = true;
+    (async () => {
+      const { data, error } = await supabase.from("courses").select("id, name, code, semesters").order("name");
+      if (!active) return;
+      if (!error && data && data.length > 0) {
+        setCourses(data as CourseOption[]);
+      }
+      setCoursesLoading(false);
+    })();
+    return () => { active = false; };
+  }, []);
+
+  const selectedCourse = courses.find((c) => c.id === courseId);
   const semCount = selectedCourse?.semesters ?? 8;
 
   const handleSubmit = async (e: React.FormEvent) => {
