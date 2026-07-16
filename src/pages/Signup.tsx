@@ -102,9 +102,9 @@ const Signup = () => {
           </div>
           <div>
             <Label className="font-body text-sm">Course</Label>
-            <Select value={courseId} onValueChange={(v) => { setCourseId(v); setSemester(""); }} required>
+            <Select value={courseId} onValueChange={(v) => { setCourseId(v); setSemester(""); }} required disabled={coursesLoading}>
               <SelectTrigger className="mt-1 font-body">
-                <SelectValue placeholder="Select your course" />
+                <SelectValue placeholder={coursesLoading ? "Loading courses..." : "Select your course"} />
               </SelectTrigger>
               <SelectContent>
                 {courses.map((c) => (
