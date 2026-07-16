@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
@@ -8,26 +8,14 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { GraduationCap, UserPlus } from "lucide-react";
 import { toast } from "sonner";
 import { motion } from "framer-motion";
+import { supabase } from "@/integrations/supabase/client";
 
-const HARDCODED_COURSES = [
-  {
-    id: "0ffdff6e-6fdb-420d-ba00-334969789fe6",
-    name: "BSc Computer Science",
-    code: "BSCCS",
-    semesters: 8,
-  },
-  {
-    id: "ee4a58ce-c14c-4f70-97ee-eb23f35d9384",
-    name: "BA English",
-    code: "BAENG",
-    semesters: 8,
-  },
-  {
-    id: "a3175d34-8e54-440f-845d-7f03ea0d1156",
-    name: "BA Economics",
-    code: "BAECO",
-    semesters: 8,
-  },
+type CourseOption = { id: string; name: string; code?: string; semesters?: number };
+
+const FALLBACK_COURSES: CourseOption[] = [
+  { id: "0ffdff6e-6fdb-420d-ba00-334969789fe6", name: "BSc Computer Science", code: "BSCCS", semesters: 8 },
+  { id: "ee4a58ce-c14c-47f0-97ee-eb23f35d9384", name: "BA English", code: "BAENG", semesters: 8 },
+  { id: "a3175d34-8e54-440f-845d-7f03ea0d1156", name: "BA Economics", code: "BAECO", semesters: 8 },
 ];
 
 const Signup = () => {
