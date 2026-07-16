@@ -115,9 +115,9 @@ const Signup = () => {
               required
               className="mt-1 flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm font-body ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
             >
-              <option value="" disabled>Select your course</option>
-              {HARDCODED_COURSES.map((c) => (
-                <option key={c.id} value={c.id}>{c.name} ({c.code})</option>
+              <option value="" disabled>{coursesLoading ? "Loading courses..." : "Select your course"}</option>
+              {courses.map((c) => (
+                <option key={c.id} value={c.id}>{c.name}{c.code ? ` (${c.code})` : ""}</option>
               ))}
             </select>
           </div>
