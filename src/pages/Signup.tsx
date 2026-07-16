@@ -19,16 +19,21 @@ const Signup = () => {
   const [courseId, setCourseId] = useState("");
   const [semester, setSemester] = useState("");
   const [courses, setCourses] = useState<CourseOption[]>([]);
+  const [coursesLoading, setCoursesLoading] = useState(true);
   const [loading, setLoading] = useState(false);
   const { signUp } = useAuth();
   const navigate = useNavigate();
 
   useEffect(() => {
+    setCoursesLoading(true);
     supabase
       .from("courses")
       .select("id, name, code, semesters")
       .order("name")
-      .then(({ data }) => setCourses(data ?? []));
+      .then(({ data }) => {
+        setCourses(data ?? []);
+        setCoursesLoading(false);
+      });
   }, []);
 
   const selectedCourse = courses.find((c) => c.id === courseId);
@@ -97,9 +102,9 @@ const Signup = () => {
           </div>
           <div>
             <Label className="font-body text-sm">Course</Label>
-            <Select value={courseId} onValueChange={(v) => { setCourseId(v); setSemester(""); }} required>
+            <Select value={courseId} onValueChange={(v) => { setCourseId(v); setSemester(""); }} required disabled={coursesLoading}>
               <SelectTrigger className="mt-1 font-body">
-                <SelectValue placeholder="Select your course" />
+                <SelectValue placeholder={coursesLoading ? "Loading courses..." : "Select your course"} />
               </SelectTrigger>
               <SelectContent>
                 {courses.map((c) => (
