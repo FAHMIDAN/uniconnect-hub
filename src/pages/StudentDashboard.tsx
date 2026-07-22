@@ -255,9 +255,9 @@ const StudentDashboard = () => {
                 </div>
               )}
             </div>
-            <div className="flex items-center gap-2 flex-wrap">
+            <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 w-full sm:w-auto">
               {profileComplete && (
-                <Button size="sm" variant="outline" className="font-body text-xs gap-1.5" onClick={() => setUploadOpen(true)}>
+                <Button size="sm" variant="outline" className="font-body text-xs gap-1.5 w-full sm:w-auto justify-center" onClick={() => setUploadOpen(true)}>
                   <Plus className="h-3.5 w-3.5" /> Upload Material
                 </Button>
               )}
