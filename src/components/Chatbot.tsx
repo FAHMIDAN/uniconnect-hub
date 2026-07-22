@@ -111,8 +111,8 @@ export function Chatbot({ userProfile }: ChatbotProps) {
     <>
       <AnimatePresence>
         {!open && (
-          <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }} exit={{ scale: 0 }} className="fixed bottom-6 right-6 z-50">
-            <Button onClick={() => setOpen(true)} className="h-14 w-14 rounded-full bg-green-600 text-white shadow-xl hover:bg-green-700">
+          <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }} exit={{ scale: 0 }} className="fixed bottom-4 right-4 sm:bottom-6 sm:right-6 z-50">
+            <Button onClick={() => setOpen(true)} className="h-12 w-12 sm:h-14 sm:w-14 rounded-full bg-green-600 text-white shadow-xl hover:bg-green-700">
               <MessageCircle className="h-6 w-6" />
             </Button>
           </motion.div>
@@ -123,7 +123,7 @@ export function Chatbot({ userProfile }: ChatbotProps) {
         {open && (
           <motion.div
             initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 20 }}
-            className="fixed bottom-6 right-6 z-50 w-[350px] h-[500px] bg-white rounded-2xl flex flex-col shadow-2xl border border-gray-200 overflow-hidden"
+            className="fixed bottom-4 right-4 left-4 sm:left-auto sm:bottom-6 sm:right-6 z-50 sm:w-[350px] w-auto h-[70vh] sm:h-[500px] max-h-[600px] bg-white rounded-2xl flex flex-col shadow-2xl border border-gray-200 overflow-hidden"
           >
             <div className="bg-green-600 p-4 flex justify-between items-center text-white">
               <div className="flex items-center gap-2"><Bot size={20} /> <span className="font-bold">SSC Study Assistant</span></div>

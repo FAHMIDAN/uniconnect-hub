@@ -107,23 +107,29 @@ const AdminDashboard = () => {
       toast.error("Please fill in all fields");
       return;
     }
+    const isPdf =
+      selectedFile &&
+      (selectedFile.type === "application/pdf" ||
+        selectedFile.name.toLowerCase().endsWith(".pdf"));
+    if (!selectedFile || !isPdf) {
+      toast.error("Please select a valid PDF file before uploading.");
+      return;
+    }
     setUploading(true);
 
     let fileUrl: string | null = null;
     let fileSize: string | null = null;
 
-    if (selectedFile) {
-      const filePath = `${Date.now()}_${selectedFile.name}`;
-      const { error: uploadError } = await supabase.storage.from("materials").upload(filePath, selectedFile);
-      if (uploadError) {
-        toast.error("File upload failed: " + uploadError.message);
-        setUploading(false);
-        return;
-      }
-      const { data: urlData } = supabase.storage.from("materials").getPublicUrl(filePath);
-      fileUrl = urlData.publicUrl;
-      fileSize = `${(selectedFile.size / (1024 * 1024)).toFixed(1)} MB`;
+    const filePath = `${Date.now()}_${selectedFile.name}`;
+    const { error: uploadError } = await supabase.storage.from("materials").upload(filePath, selectedFile);
+    if (uploadError) {
+      toast.error("File upload failed: " + uploadError.message);
+      setUploading(false);
+      return;
     }
+    const { data: urlData } = supabase.storage.from("materials").getPublicUrl(filePath);
+    fileUrl = urlData.publicUrl;
+    fileSize = `${(selectedFile.size / (1024 * 1024)).toFixed(1)} MB`;
 
     const { error } = await supabase.from("materials").insert({
       title: newTitle, type: newType, course_id: uploadTarget.courseId, semester: uploadTarget.semester, subject: newSubject, file_url: fileUrl, file_size: fileSize, uploaded_by: user!.id,
@@ -464,8 +470,8 @@ const AdminDashboard = () => {
               </div>
             </div>
             <div>
-              <Label className="font-body text-sm">PDF File</Label>
-              <Input type="file" accept=".pdf" onChange={(e) => setSelectedFile(e.target.files?.[0] || null)} className="mt-1 font-body" />
+              <Label className="font-body text-sm">PDF File <span className="text-destructive">*</span></Label>
+              <Input required type="file" accept="application/pdf,.pdf" onChange={(e) => setSelectedFile(e.target.files?.[0] || null)} className="mt-1 font-body" />
             </div>
             <Button onClick={handleUpload} disabled={uploading} className="w-full gradient-primary text-primary-foreground font-body gap-1.5">
               <Upload className="h-4 w-4" /> {uploading ? "Uploading..." : "Upload Material"}
