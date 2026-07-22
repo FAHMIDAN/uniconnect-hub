@@ -107,23 +107,29 @@ const AdminDashboard = () => {
       toast.error("Please fill in all fields");
       return;
     }
+    const isPdf =
+      selectedFile &&
+      (selectedFile.type === "application/pdf" ||
+        selectedFile.name.toLowerCase().endsWith(".pdf"));
+    if (!selectedFile || !isPdf) {
+      toast.error("Please select a valid PDF file before uploading.");
+      return;
+    }
     setUploading(true);
 
     let fileUrl: string | null = null;
     let fileSize: string | null = null;
 
-    if (selectedFile) {
-      const filePath = `${Date.now()}_${selectedFile.name}`;
-      const { error: uploadError } = await supabase.storage.from("materials").upload(filePath, selectedFile);
-      if (uploadError) {
-        toast.error("File upload failed: " + uploadError.message);
-        setUploading(false);
-        return;
-      }
-      const { data: urlData } = supabase.storage.from("materials").getPublicUrl(filePath);
-      fileUrl = urlData.publicUrl;
-      fileSize = `${(selectedFile.size / (1024 * 1024)).toFixed(1)} MB`;
+    const filePath = `${Date.now()}_${selectedFile.name}`;
+    const { error: uploadError } = await supabase.storage.from("materials").upload(filePath, selectedFile);
+    if (uploadError) {
+      toast.error("File upload failed: " + uploadError.message);
+      setUploading(false);
+      return;
     }
+    const { data: urlData } = supabase.storage.from("materials").getPublicUrl(filePath);
+    fileUrl = urlData.publicUrl;
+    fileSize = `${(selectedFile.size / (1024 * 1024)).toFixed(1)} MB`;
 
     const { error } = await supabase.from("materials").insert({
       title: newTitle, type: newType, course_id: uploadTarget.courseId, semester: uploadTarget.semester, subject: newSubject, file_url: fileUrl, file_size: fileSize, uploaded_by: user!.id,
