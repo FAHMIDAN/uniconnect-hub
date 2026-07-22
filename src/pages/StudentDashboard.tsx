@@ -243,19 +243,19 @@ const StudentDashboard = () => {
             <GraduationCap className="h-5 w-5 text-primary" />
             <h1 className="font-heading font-bold text-xl text-foreground">Study Hub</h1>
           </div>
-          <div className="flex items-center justify-between">
-            <div>
+          <div className="flex items-start justify-between gap-3 flex-wrap">
+            <div className="min-w-0">
               <p className="text-sm text-muted-foreground font-body">
                 Welcome{displayName ? `, ${displayName}` : ""}!
               </p>
               {profileComplete && (
-                <div className="flex items-center gap-2 mt-1">
+                <div className="flex items-center gap-2 mt-1 flex-wrap">
                   <Badge variant="secondary" className="text-[10px] font-body">{profile?.courses?.name}</Badge>
                   <Badge variant="outline" className="text-[10px] font-body">Semester {profile?.current_semester}</Badge>
                 </div>
               )}
             </div>
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 flex-wrap">
               {profileComplete && (
                 <Button size="sm" variant="outline" className="font-body text-xs gap-1.5" onClick={() => setUploadOpen(true)}>
                   <Plus className="h-3.5 w-3.5" /> Upload Material
