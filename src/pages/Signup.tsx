@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
@@ -10,7 +10,13 @@ import { toast } from "sonner";
 import { motion } from "framer-motion";
 import { supabase } from "@/integrations/supabase/client";
 
-type CourseOption = { id: string; name: string; code: string; semesters: number };
+type CourseOption = { id: string; name: string; code?: string; semesters?: number };
+
+const FALLBACK_COURSES: CourseOption[] = [
+  { id: "0ffdff6e-6fdb-420d-ba00-334969789fe6", name: "BSc Computer Science", code: "BSCCS", semesters: 8 },
+  { id: "ee4a58ce-c14c-47f0-97ee-eb23f35d9384", name: "BA English", code: "BAENG", semesters: 8 },
+  { id: "a3175d34-8e54-440f-845d-7f03ea0d1156", name: "BA Economics", code: "BAECO", semesters: 8 },
+];
 
 const Signup = () => {
   const [fullName, setFullName] = useState("");
@@ -18,17 +24,23 @@ const Signup = () => {
   const [password, setPassword] = useState("");
   const [courseId, setCourseId] = useState("");
   const [semester, setSemester] = useState("");
-  const [courses, setCourses] = useState<CourseOption[]>([]);
   const [loading, setLoading] = useState(false);
+  const [courses, setCourses] = useState<CourseOption[]>(FALLBACK_COURSES);
+  const [coursesLoading, setCoursesLoading] = useState(true);
   const { signUp } = useAuth();
   const navigate = useNavigate();
 
   useEffect(() => {
-    supabase
-      .from("courses")
-      .select("id, name, code, semesters")
-      .order("name")
-      .then(({ data }) => setCourses(data ?? []));
+    let active = true;
+    (async () => {
+      const { data, error } = await supabase.from("courses").select("id, name, code, semesters").order("name");
+      if (!active) return;
+      if (!error && data && data.length > 0) {
+        setCourses(data as CourseOption[]);
+      }
+      setCoursesLoading(false);
+    })();
+    return () => { active = false; };
   }, []);
 
   const selectedCourse = courses.find((c) => c.id === courseId);
@@ -97,16 +109,17 @@ const Signup = () => {
           </div>
           <div>
             <Label className="font-body text-sm">Course</Label>
-            <Select value={courseId} onValueChange={(v) => { setCourseId(v); setSemester(""); }} required>
-              <SelectTrigger className="mt-1 font-body">
-                <SelectValue placeholder="Select your course" />
-              </SelectTrigger>
-              <SelectContent>
-                {courses.map((c) => (
-                  <SelectItem key={c.id} value={c.id}>{c.name} ({c.code})</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <select
+              value={courseId}
+              onChange={(e) => { setCourseId(e.target.value); setSemester(""); }}
+              required
+              className="mt-1 flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm font-body ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+            >
+              <option value="" disabled>{coursesLoading ? "Loading courses..." : "Select your course"}</option>
+              {courses.map((c) => (
+                <option key={c.id} value={c.id}>{c.name}{c.code ? ` (${c.code})` : ""}</option>
+              ))}
+            </select>
           </div>
           <div>
             <Label className="font-body text-sm">Semester</Label>
